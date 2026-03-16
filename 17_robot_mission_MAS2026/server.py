@@ -2,11 +2,19 @@
 
 from mesa.visualization import SolaraViz, make_space_component
 from model import RobotMission
+from utils import AgentColor
 
 
 def agent_portrayal(agent):
     size = 10
-    color = "tab:red"
+    color = "black"
+    if agent.color == AgentColor.GREEN:
+        color = "green"
+    elif agent.color == AgentColor.YELLOW:
+        color = "yellow"
+    elif agent.color == AgentColor.RED:
+        color = "red"
+
     return {"size": size, "color": color}
 
 model_params = {

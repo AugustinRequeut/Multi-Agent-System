@@ -1,10 +1,9 @@
 # Group 17 - Created 16/03/2026 - Martinelli, Requeut
 
 import mesa
-from utils import Action
+from utils import Action, AgentColor
 
 class RobotAgent(mesa.Agent):
-
     def __init__(self, model):
         """Base class for Robot Agents.
 
@@ -13,9 +12,10 @@ class RobotAgent(mesa.Agent):
         """
         super().__init__(model)
         self.knowledge = None
+        self.color = None
 
     def step_agent(self):
-        percepts = self.model.percept(self)
+        percepts = self.model.get_neighbors(self)
         self.update(percepts)
         action = self.deliberate()
         self.model.do(self, action)
@@ -31,12 +31,15 @@ class RobotAgent(mesa.Agent):
 class GreenRobotAgent(RobotAgent):
     def __init__(self, model):
         super().__init__(model)
+        self.color = AgentColor.GREEN
 
 class YellowRobotAgent(RobotAgent):
     def __init__(self, model):
         super().__init__(model)
+        self.color = AgentColor.YELLOW
 
 class RedRobotAgent(RobotAgent):
     def __init__(self, model):
         super().__init__(model)
+        self.color = AgentColor.RED
     

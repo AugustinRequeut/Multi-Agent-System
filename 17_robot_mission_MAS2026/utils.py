@@ -8,3 +8,8 @@ class Action(Enum):
     MOVE_TOP = 3
     MOVE_DOWN = 4
     INTERACT = 5
+
+class AgentColor(Enum):
+    GREEN = 1
+    YELLOW = 2
+    RED = 3

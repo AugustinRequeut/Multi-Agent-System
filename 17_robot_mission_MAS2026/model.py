@@ -3,7 +3,7 @@
 from mesa.datacollection import DataCollector
 from mesa import Model
 from mesa.space import MultiGrid
-from agents import RobotAgent
+from agents import GreenRobotAgent, RedRobotAgent, YellowRobotAgent
 from utils import Action 
 
 class RobotMission(Model):
@@ -13,7 +13,7 @@ class RobotMission(Model):
 
         Args:
             number_of_green_robots (int, optional): Number of green robots. Defaults to 10.
-            number_of_yellow_robots (int, optional): Number of yellown robots. Defaults to 10.
+            number_of_yellow_robots (int, optional): Number of yellow robots. Defaults to 10.
             number_of_red_robots (int, optional): Number of red robots. Defaults to 10.
             width_z1 (int, optional): z1 grid width. Defaults to 10.
             width_z2 (int, optional): z2 grid width. Defaults to 10.
@@ -24,7 +24,7 @@ class RobotMission(Model):
 
         super().__init__(seed=seed)
         self.grid = MultiGrid(width_z1 + width_z2 + width_z3, height, torus=True)
-        agents = [RobotAgent(self) for i in range(number_of_green_robots)]
+        agents = [GreenRobotAgent(self) for i in range(number_of_green_robots)] + [YellowRobotAgent(self) for i in range(number_of_yellow_robots)] + [RedRobotAgent(self) for i in range(number_of_red_robots)]
         for agent in agents:
             x = self.random.randrange(width_z1)
             y = self.random.randrange(height)
@@ -51,6 +51,6 @@ class RobotMission(Model):
 
         return self.grid.get_neighborhood(agent.pos, moore=False, include_center=False)
 
-    def percept(self, agent):
+    def get_neighbors(self, agent):
         return self.grid.get_neighborhood(agent.pos, moore=False, include_center=False)
         

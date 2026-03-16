@@ -24,8 +24,8 @@ class RobotMission(Model):
         self.grid = MultiGrid(width_z1 + width_z2 + width_z3, height, torus=True)
         agents = [RobotAgent(self) for i in range(number_of_green_robots)]
         for agent in agents:
-            x = self.random.random(width_z1)
-            y = self.random.random(height)
+            x = self.random.randrange(width_z1)
+            y = self.random.randrange(height)
             self.grid.place_agent(agent, (x, y))
 
 
@@ -33,15 +33,16 @@ class RobotMission(Model):
         self.agents.shuffle_do("step_agent")
     
     def do(self, agent, action):
-
         if action == Action.MOVE_RIGHT:
-            new_position = agent.pos[0] + 1, agent.pos[1]
-        if action == Action.MOVE_LEFT:
-            new_position = agent.pos[0] - 1, agent.pos[1]
-        if action == Action.MOVE_TOP:
             new_position = agent.pos[0], agent.pos[1] + 1
-        if action == Action.MOVE_DOWN:
+        elif action == Action.MOVE_LEFT:
             new_position = agent.pos[0], agent.pos[1] - 1
+        elif action == Action.MOVE_TOP:
+            new_position = agent.pos[0] - 1, agent.pos[1]
+        elif action == Action.MOVE_DOWN:
+            new_position = agent.pos[0] + 1, agent.pos[1]
+        else:
+            new_position = agent.pos
 
         if new_position in self.grid.get_neighborhood(agent.pos, moore=False, include_center=False):
             self.grid.move_agent(agent, new_position)

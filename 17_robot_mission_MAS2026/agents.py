@@ -16,8 +16,8 @@ class RobotAgent(mesa.Agent):
 
     def step_agent(self):
         percepts = self.model.percept(self)
-        self.update(self.knowledge, percepts)
-        action = self.deliberate(self.knowledge)
+        self.update(percepts)
+        action = self.deliberate()
         self.model.do(self, action)
     
     def update(self, percepts):

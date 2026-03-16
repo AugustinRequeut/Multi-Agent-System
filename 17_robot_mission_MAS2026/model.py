@@ -36,7 +36,7 @@ class RobotMission(Model):
     def get_zone(self, pos):
         if pos[0] < self.width_z1:
             return 1
-        elif pos[0] < self.width_z2:
+        elif pos[0] < self.width_z1 + self.width_z2:
             return 2
         else:
             return 3

@@ -9,7 +9,11 @@ class Action(Enum):
     MOVE_DOWN = 4
     INTERACT = 5
 
-class AgentColor(Enum):
+class Color(Enum):
     GREEN = 1
     YELLOW = 2
     RED = 3
+
+class Type(Enum):
+    ROBOT = 1
+    WASTE = 2

@@ -4,17 +4,19 @@ from mesa.datacollection import DataCollector
 from mesa import Model
 from mesa.space import MultiGrid
 from agents import GreenRobotAgent, RedRobotAgent, YellowRobotAgent
-from utils import Action, AgentColor 
+from objects import Radioactivity, WasteDisposalZone, Waste
+from utils import Action, Color, Type 
 
 class RobotMission(Model):
     """A model with some number of agents."""
-    def __init__(self, number_of_green_robots=1, number_of_yellow_robots=1, number_of_red_robots=1, width_z1=10, width_z2=10, width_z3=10, height=30, seed=None):
+    def __init__(self, number_of_green_robots=1, number_of_yellow_robots=1, number_of_red_robots=1, initial_waste_density=0.4, width_z1=10, width_z2=10, width_z3=10, height=30, seed=None):
         """Initialize the model.
 
         Args:
             number_of_green_robots (int, optional): Number of green robots. Defaults to 10.
             number_of_yellow_robots (int, optional): Number of yellow robots. Defaults to 10.
             number_of_red_robots (int, optional): Number of red robots. Defaults to 10.
+            initial_waste_density (float, optional): Probability that a zone 1 cell contains a waste at the beginning. Defaults to 0.4
             width_z1 (int, optional): z1 grid width. Defaults to 10.
             width_z2 (int, optional): z2 grid width. Defaults to 10.
             width_z3 (int, optional): z3 grid width. Defaults to 10.
@@ -33,6 +35,12 @@ class RobotMission(Model):
             y = self.random.randrange(height)
             self.grid.place_agent(agent, (x, y))
 
+        wastes = [Waste(self, Color.GREEN) for i in range(width_z1 * height) if self.random.random() <= initial_waste_density]
+        for waste in wastes: 
+            x = self.random.randrange(width_z1)
+            y = self.random.randrange(height)
+            self.grid.place_agent(waste, (x, y))
+
     def get_zone(self, pos):
         if pos[0] < self.width_z1:
             return 1
@@ -43,7 +51,7 @@ class RobotMission(Model):
 
 
     def step(self):
-        self.agents.shuffle_do("step_agent")
+        self.agents.select(lambda agent: agent.type == Type.ROBOT).shuffle_do("step_agent")
     
     def do(self, agent, action):
         if action == Action.MOVE_RIGHT:
@@ -59,7 +67,7 @@ class RobotMission(Model):
 
         if new_position in self.grid.get_neighborhood(agent.pos, moore=False, include_center=False):
             zone = self.get_zone(new_position)
-            if (agent.color == AgentColor.GREEN and zone <= 1) or (agent.color == AgentColor.YELLOW and zone <= 2) or (agent.color == AgentColor.RED and zone <= 3):
+            if (agent.color == Color.GREEN and zone <= 1) or (agent.color == Color.YELLOW and zone <= 2) or (agent.color == Color.RED and zone <= 3):
                 self.grid.move_agent(agent, new_position)
 
         return self.grid.get_neighborhood(agent.pos, moore=False, include_center=False)

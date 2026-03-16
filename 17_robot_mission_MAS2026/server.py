@@ -2,28 +2,65 @@
 
 from mesa.visualization import SolaraViz, make_space_component
 from model import RobotMission
-from utils import AgentColor
+from utils import Color, Type
 
+
+ColorMapping = {
+    Color.GREEN: "green",
+    Color.YELLOW: "yellow",
+    Color.RED: "red",
+}
+ShapeMapping = {
+    Type.ROBOT: "2",
+    Type.WASTE: "p"
+}
 
 def agent_portrayal(agent):
-    size = 10
-    color = "black"
-    if agent.color == AgentColor.GREEN:
-        color = "green"
-    elif agent.color == AgentColor.YELLOW:
-        color = "yellow"
-    elif agent.color == AgentColor.RED:
-        color = "red"
-
-    return {"size": size, "color": color}
+    size = 40
+    color = ColorMapping.get(agent.color, "black")
+    shape = ShapeMapping.get(agent.type, "x")
+    
+    return {"size": size, "color": color, "marker": shape}
 
 model_params = {
+    "number_of_green_robots": {
+        "type": "SliderInt",
+        "value": 5,
+        "label": "Number of Green Robots:",
+        "min": 1,
+        "max": 20,
+        "step": 1,
+    },
+    "number_of_yellow_robots": {
+        "type": "SliderInt",
+        "value": 5,
+        "label": "Number of Yellow Robots:",
+        "min": 1,
+        "max": 20,
+        "step": 1,
+    },
+    "number_of_red_robots": {
+        "type": "SliderInt",
+        "value": 5,
+        "label": "Number of Red Robots:",
+        "min": 1,
+        "max": 20,
+        "step": 1,
+    },
+    "initial_waste_density": {
+        "type": "SliderFloat",
+        "value": 0.1,
+        "label": "Density of waste:",
+        "min": 0.01,
+        "max": 0.5,
+        "step": 0.01,
+    },
 }
 
 # Create initial model instance
-model = RobotMission()
+model = RobotMission(number_of_green_robots=10, number_of_yellow_robots=10, number_of_red_robots=10, initial_waste_density=0.1)
 
-SpaceGraph = make_space_component(agent_portrayal)
+SpaceGraph = make_space_component(agent_portrayal, propertylayer_portrayal=None)
 
 #Create the Dashboard
 page = SolaraViz(

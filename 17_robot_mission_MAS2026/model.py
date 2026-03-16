@@ -1,3 +1,5 @@
+# Group 17 - Created 16/03/2026 - Martinelli, Requeut
+
 from mesa.datacollection import DataCollector
 from mesa import Model
 from mesa.space import MultiGrid

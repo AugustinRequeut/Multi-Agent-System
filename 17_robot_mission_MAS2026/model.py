@@ -145,5 +145,18 @@ class RobotMission(Model):
                     new_waste = Waste(self, waste_color)
                     self.grid.place_agent(new_waste, agent.pos)
 
-    def get_neighbors(self, agent):
-        return self.grid.get_neighborhood(agent.pos, moore=False, include_center=False)
+    def get_percepts(self, agent: RobotAgent):
+        """Returns a dict corresponding to the agent's perception."""
+        percepts = {}
+
+        neighborhood = self.grid.get_neighborhood(
+            agent.pos, 
+            moore=False, # Only 4 neighboors
+            include_center=True
+        )
+
+        for pos in neighborhood:
+            contents = self.grid.get_cell_list_contents([pos])
+            percepts[pos] = contents
+
+        return percepts

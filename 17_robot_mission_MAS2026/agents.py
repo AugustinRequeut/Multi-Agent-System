@@ -20,7 +20,7 @@ class RobotAgent(mesa.Agent):
         self.color = color
 
     def step_agent(self):
-        percepts = self.model.get_neighbors(self)
+        percepts = self.model.get_percepts(self)
         self.__update(percepts)
         action = self.__deliberate()
         self.model.do(self, action)

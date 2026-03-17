@@ -98,7 +98,25 @@ class RobotMission(Model):
 
     def __handle_interaction(self, agent: RobotAgent):
         """Handle waste collection, transformation and deposit."""
-        pass
+        cell_contents = self.grid.get_cell_list_contents([agent.pos])
+        wastes = [obj for obj in cell_contents if isinstance(obj, Waste)]
+        if len(wastes) > 1:
+            raise ValueError("More than 1 waste in the same cell.")
+        elif len(wastes) == 1:
+            waste = wastes[0]
+            if agent.can_pick(waste.color):
+                agent.pick(waste.color)
+
+                self.grid.remove_agent(waste)
+                waste.remove()
+
+                agent.transform()
+        else:
+            waste_color = agent.deposit()
+            is_waste_disposal_zone = any(isinstance(obj, WasteDisposalZone) for obj in cell_contents)
+            if waste_color and not is_waste_disposal_zone:
+                new_waste = Waste(self, waste_color)
+                self.grid.place_agent(new_waste, agent.pos)
 
     def get_neighbors(self, agent):
         return self.grid.get_neighborhood(agent.pos, moore=False, include_center=False)

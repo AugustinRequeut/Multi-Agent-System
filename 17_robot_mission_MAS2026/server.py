@@ -2,25 +2,9 @@
 
 from mesa.visualization import SolaraViz, make_space_component
 from model import RobotMission
-from utils import Color, Type
-
-
-ColorMapping = {
-    Color.GREEN: "green",
-    Color.YELLOW: "yellow",
-    Color.RED: "red",
-}
-ShapeMapping = {
-    Type.ROBOT: "2",
-    Type.WASTE: "p"
-}
 
 def agent_portrayal(agent):
-    size = 40
-    color = ColorMapping.get(agent.color, "black")
-    shape = ShapeMapping.get(agent.type, "x")
-    
-    return {"size": size, "color": color, "marker": shape}
+    return agent.get_display_dict()
 
 model_params = {
     "number_of_green_robots": {
@@ -60,7 +44,7 @@ model_params = {
 # Create initial model instance
 model = RobotMission(number_of_green_robots=10, number_of_yellow_robots=10, number_of_red_robots=10, initial_waste_density=0.1)
 
-SpaceGraph = make_space_component(agent_portrayal, propertylayer_portrayal=None)
+SpaceGraph = make_space_component(agent_portrayal)
 
 #Create the Dashboard
 page = SolaraViz(

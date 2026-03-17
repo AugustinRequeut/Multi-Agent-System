@@ -3,13 +3,13 @@
 from mesa.datacollection import DataCollector
 from mesa import Model
 from mesa.space import MultiGrid
-from agents import GreenRobotAgent, RedRobotAgent, YellowRobotAgent
+from agents import RobotAgent, GreenRobotAgent, RedRobotAgent, YellowRobotAgent
 from objects import Radioactivity, WasteDisposalZone, Waste
-from utils import Action, Color, Type 
+from utils import Action, Color, MOVE_COORDS
 
 class RobotMission(Model):
     """A model with some number of agents."""
-    def __init__(self, number_of_green_robots=1, number_of_yellow_robots=1, number_of_red_robots=1, initial_waste_density=0.4, width_z1=10, width_z2=10, width_z3=10, height=30, seed=None):
+    def __init__(self, number_of_green_robots=1, number_of_yellow_robots=1, number_of_red_robots=1, initial_waste_density=0.1, width_z1=10, width_z2=10, width_z3=10, height=30, seed=None):
         """Initialize the model.
 
         Args:
@@ -25,23 +25,33 @@ class RobotMission(Model):
         """
 
         super().__init__(seed=seed)
+
+        # Init grid
         self.width_z1 = width_z1
         self.width_z2 = width_z2
         self.width_z3 = width_z3
         self.grid = MultiGrid(width_z1 + width_z2 + width_z3, height, torus=False)
+
+        # Init Radioactivity levels
+        for _, pos in self.grid.coord_iter():
+            self.grid.place_agent(Radioactivity(self, self.__get_zone(pos)), pos)
+
+        # Init Robots
         agents = [GreenRobotAgent(self) for i in range(number_of_green_robots)] + [YellowRobotAgent(self) for i in range(number_of_yellow_robots)] + [RedRobotAgent(self) for i in range(number_of_red_robots)]
         for agent in agents:
             x = self.random.randrange(width_z1)
             y = self.random.randrange(height)
             self.grid.place_agent(agent, (x, y))
 
+        # Init Wastes
         wastes = [Waste(self, Color.GREEN) for i in range(width_z1 * height) if self.random.random() <= initial_waste_density]
         for waste in wastes: 
             x = self.random.randrange(width_z1)
             y = self.random.randrange(height)
             self.grid.place_agent(waste, (x, y))
 
-    def get_zone(self, pos):
+    def __get_zone(self, pos):
+        """Private method used to initialize the radioactivity levels of the grid."""
         if pos[0] < self.width_z1:
             return 1
         elif pos[0] < self.width_z1 + self.width_z2:
@@ -49,29 +59,18 @@ class RobotMission(Model):
         else:
             return 3
 
-
     def step(self):
-        self.agents.select(lambda agent: agent.type == Type.ROBOT).shuffle_do("step_agent")
+        self.agents.select(lambda agent: isinstance(agent, RobotAgent)).shuffle_do("step_agent")
     
-    def do(self, agent, action):
-        if action == Action.MOVE_RIGHT:
-            new_position = agent.pos[0] + 1, agent.pos[1]
-        elif action == Action.MOVE_LEFT:
-            new_position = agent.pos[0] - 1, agent.pos[1]
-        elif action == Action.MOVE_TOP:
-            new_position = agent.pos[0], agent.pos[1] + 1
-        elif action == Action.MOVE_DOWN:
-            new_position = agent.pos[0], agent.pos[1] - 1
-        else:
-            new_position = agent.pos
+    def do(self, agent: RobotAgent, action):
+        """Check if agent's action is valid and execute it."""
+        dx,dy = MOVE_COORDS.get(action, (0,0))
+        new_position = agent.pos[0]+dx, agent.pos[1]+dy 
 
         if new_position in self.grid.get_neighborhood(agent.pos, moore=False, include_center=False):
-            zone = self.get_zone(new_position)
-            if (agent.color == Color.GREEN and zone <= 1) or (agent.color == Color.YELLOW and zone <= 2) or (agent.color == Color.RED and zone <= 3):
+            zone = self.__get_zone(new_position)
+            if agent.can_access_zone(zone):
                 self.grid.move_agent(agent, new_position)
-
-        return self.grid.get_neighborhood(agent.pos, moore=False, include_center=False)
 
     def get_neighbors(self, agent):
         return self.grid.get_neighborhood(agent.pos, moore=False, include_center=False)
-        

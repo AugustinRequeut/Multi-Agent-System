@@ -1,17 +1,30 @@
 # Group 17 - Created 16/03/2026 - Martinelli, Requeut
 
-###TO DO###
-# Ensure no superposition of Robots and no superposition of wastes (both in init and after action)
-###########
-
-
-
 from mesa.datacollection import DataCollector
 from mesa import Model
 from mesa.space import MultiGrid
 from agents import RobotAgent, GreenRobotAgent, RedRobotAgent, YellowRobotAgent
 from objects import Radioactivity, WasteDisposalZone, Waste
 from utils import Action, Color, MOVE_COORDS
+
+def compute_waste_by_color(model, color):
+        total_waste = 0
+        for agent in model.agents:
+            # Wastes on the grid
+            if isinstance(agent, Waste) and agent.color == color:
+                total_waste += 1
+                
+            # Wastes in the robots inventory
+            elif isinstance(agent, RobotAgent):
+                total_waste += agent.get_waste_count(color)
+        
+        return total_waste
+
+def compute_disposed_waste(model):
+    for agent in model.agents:
+        if isinstance(agent, WasteDisposalZone):
+            return agent.get_disposed_count()
+    return 0
 
 class RobotMission(Model):
     """A model with some number of agents."""
@@ -31,6 +44,15 @@ class RobotMission(Model):
         """
 
         super().__init__(seed=seed)
+
+        self.datacollector = DataCollector(
+            model_reporters={
+                "Green Waste": lambda m: compute_waste_by_color(m, Color.GREEN),
+                "Yellow Waste": lambda m: compute_waste_by_color(m, Color.YELLOW),
+                "Red Waste": lambda m: compute_waste_by_color(m, Color.RED),
+                "Disposed": compute_disposed_waste
+            },
+        )
 
         # Init grid
         self.width_z1 = width_z1
@@ -73,6 +95,7 @@ class RobotMission(Model):
 
     def step(self):
         self.agents.select(lambda agent: isinstance(agent, RobotAgent)).shuffle_do("step_agent")
+        self.datacollector.collect(self)
     
     def do(self, agent: RobotAgent, action):
         """Check if agent's action is valid and execute it."""
@@ -113,10 +136,14 @@ class RobotMission(Model):
                 agent.transform()
         else:
             waste_color = agent.deposit()
-            is_waste_disposal_zone = any(isinstance(obj, WasteDisposalZone) for obj in cell_contents)
-            if waste_color and not is_waste_disposal_zone:
-                new_waste = Waste(self, waste_color)
-                self.grid.place_agent(new_waste, agent.pos)
+            disposal_zone = [obj for obj in cell_contents if isinstance(obj, WasteDisposalZone)]
+            
+            if waste_color:
+                if disposal_zone:
+                    disposal_zone.add_waste()
+                else:
+                    new_waste = Waste(self, waste_color)
+                    self.grid.place_agent(new_waste, agent.pos)
 
     def get_neighbors(self, agent):
         return self.grid.get_neighborhood(agent.pos, moore=False, include_center=False)

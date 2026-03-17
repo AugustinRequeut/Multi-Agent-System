@@ -1,7 +1,8 @@
 # Group 17 - Created 16/03/2026 - Martinelli, Requeut
 
-from mesa.visualization import SolaraViz, make_space_component
+from mesa.visualization import SolaraViz, make_space_component, make_plot_component
 from model import RobotMission
+from utils import COLOR_MAPPING, Color
 
 def agent_portrayal(agent):
     return agent.get_display_dict()
@@ -45,11 +46,19 @@ model_params = {
 model = RobotMission(number_of_green_robots=10, number_of_yellow_robots=10, number_of_red_robots=10, initial_waste_density=0.1)
 
 SpaceGraph = make_space_component(agent_portrayal)
+WastePlot = make_plot_component(
+    {
+        "Green Waste": COLOR_MAPPING[Color.GREEN],
+        "Yellow Waste": COLOR_MAPPING[Color.YELLOW],
+        "Red Waste": COLOR_MAPPING[Color.RED],
+        "Disposed": "black"
+    }
+)
 
 #Create the Dashboard
 page = SolaraViz(
     model,
-    components=[SpaceGraph],
+    components=[SpaceGraph, WastePlot],
     model_params=model_params,
     name="Robot Mission",
 )

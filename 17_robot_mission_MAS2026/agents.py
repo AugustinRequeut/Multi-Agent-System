@@ -75,6 +75,9 @@ class RobotAgent(mesa.Agent):
             
         return None
     
+    def get_waste_count(self, color: Color) -> int:
+        return self.__content[color]
+    
 class GreenRobotAgent(RobotAgent):
     def __init__(self, model):
         super().__init__(model, Color.GREEN, 2)

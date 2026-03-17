@@ -42,6 +42,7 @@ class WasteDisposalZone(mesa.Agent):
             model: A model instance
         """
         super().__init__(model)
+        self.__disposed_count = 0
 
     def get_display_dict(self):
         return {
@@ -49,6 +50,12 @@ class WasteDisposalZone(mesa.Agent):
             "color": "black",
             "marker": "s",
         }
+    
+    def add_waste(self):
+        self.__disposed_count += 1
+
+    def get_disposed_count(self):
+        return self.__disposed_count
 
 class Waste(mesa.Agent):
     def __init__(self, model, color):

@@ -1,5 +1,11 @@
 # Group 17 - Created 16/03/2026 - Martinelli, Requeut
 
+###TO DO###
+# Ensure no superposition of Robots and no superposition of wastes (both in init and after action)
+###########
+
+
+
 from mesa.datacollection import DataCollector
 from mesa import Model
 from mesa.space import MultiGrid
@@ -49,6 +55,12 @@ class RobotMission(Model):
             x = self.random.randrange(width_z1)
             y = self.random.randrange(height)
             self.grid.place_agent(waste, (x, y))
+
+        # Init Waste disposal zone
+        waste_disposal_zone = WasteDisposalZone(self)
+        x = self.width_z1 + self.width_z2 + self.width_z3 - 1 # Waste disposal zone is on the last column of the grid
+        y = self.random.randrange(height)
+        self.grid.place_agent(waste_disposal_zone, (x, y))
 
     def __get_zone(self, pos):
         """Private method used to initialize the radioactivity levels of the grid."""

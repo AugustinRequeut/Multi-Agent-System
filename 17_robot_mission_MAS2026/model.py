@@ -151,7 +151,7 @@ class RobotMission(Model):
 
         neighborhood = self.grid.get_neighborhood(
             agent.pos, 
-            moore=False, # Only 4 neighboors
+            moore=True,
             include_center=True
         )
 

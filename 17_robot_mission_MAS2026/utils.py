@@ -7,7 +7,8 @@ class Action(Enum):
     MOVE_LEFT = 2
     MOVE_TOP = 3
     MOVE_DOWN = 4
-    INTERACT = 5
+    NOOP = 5
+    INTERACT = 6
 
 class Color(Enum): # Enum value is used to match zones values
     GREEN = 1

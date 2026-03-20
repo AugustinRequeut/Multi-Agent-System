@@ -99,6 +99,8 @@ class RobotMission(Model):
     
     def do(self, agent: RobotAgent, action):
         """Check if agent's action is valid and execute it."""
+        if action == Action.NOOP:
+            pass
         if action in MOVE_COORDS:
             self.__handle_move(agent, action)
 

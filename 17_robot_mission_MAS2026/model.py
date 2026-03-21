@@ -60,11 +60,11 @@ class RobotMission(Model):
         self.width_z3 = width_z3
         self.grid = MultiGrid(width_z1 + width_z2 + width_z3, height, torus=False)
 
-        z1_coords = [pos for _, pos in self.grid.coord_iter() if self.__get_zone(pos) == 1]
+        z1_coords = [pos for _, pos in self.grid.coord_iter() if self._get_zone(pos) == 1]
 
         # Init Radioactivity levels
         for _, pos in self.grid.coord_iter():
-            self.grid.place_agent(Radioactivity(self, self.__get_zone(pos)), pos)
+            self.grid.place_agent(Radioactivity(self, self._get_zone(pos)), pos)
 
         # Init Robots
         agents = [GreenRobotAgent(self) for _ in range(number_of_green_robots)] + [YellowRobotAgent(self) for _ in range(number_of_yellow_robots)] + [RedRobotAgent(self) for _ in range(number_of_red_robots)]
@@ -84,7 +84,7 @@ class RobotMission(Model):
         y = self.random.randrange(height)
         self.grid.place_agent(waste_disposal_zone, (x, y))
 
-    def __get_zone(self, pos):
+    def _get_zone(self, pos):
         """Private method used to initialize the radioactivity levels of the grid."""
         if pos[0] < self.width_z1:
             return 1
@@ -102,18 +102,18 @@ class RobotMission(Model):
         if action == Action.NOOP:
             pass
         if action in MOVE_COORDS:
-            self.__handle_move(agent, action)
+            self._handle_move(agent, action)
 
         elif action == Action.INTERACT:
-            self.__handle_interaction(agent)
+            self._handle_interaction(agent)
     
-    def __handle_move(self, agent: RobotAgent, action):
+    def _handle_move(self, agent: RobotAgent, action):
         """Handle agent movement and ensure the move is valid."""
         dx, dy = MOVE_COORDS[action]
         new_position = (agent.pos[0] + dx, agent.pos[1] + dy)
         # Check if position is valid
         if new_position in self.grid.get_neighborhood(agent.pos, moore=False, include_center=False):
-            zone = self.__get_zone(new_position)
+            zone = self._get_zone(new_position)
             if agent.can_access_zone(zone):
                 # Check if cell has no robot in it
                 cell_contents = self.grid.get_cell_list_contents([new_position])
@@ -121,7 +121,7 @@ class RobotMission(Model):
                 if not is_occupied_by_robot:
                     self.grid.move_agent(agent, new_position)
 
-    def __handle_interaction(self, agent: RobotAgent):
+    def _handle_interaction(self, agent: RobotAgent):
         """Handle waste collection, transformation and deposit."""
         cell_contents = self.grid.get_cell_list_contents([agent.pos])
         wastes = [obj for obj in cell_contents if isinstance(obj, Waste)]
@@ -138,7 +138,7 @@ class RobotMission(Model):
                 agent.transform()
         else:
             waste_color = agent.deposit()
-            disposal_zone = [obj for obj in cell_contents if isinstance(obj, WasteDisposalZone)]
+            disposal_zone = next((obj for obj in cell_contents if isinstance(obj, WasteDisposalZone)), None)
             
             if waste_color:
                 if disposal_zone:

@@ -12,18 +12,18 @@ class Radioactivity(mesa.Agent):
             zone: 1, 2 or 3. Used to define radioactivity level.
         """
         super().__init__(model)
-        self.__zone = zone
-        self.__radioactivity_level = (self.random.random() + zone - 1)/3
+        self._zone = zone
+        self._radioactivity_level = (self.random.random() + zone - 1)/3
 
     def get_radioactivity_level(self):
-        return self.__radioactivity_level
+        return self._radioactivity_level
     
     def get_display_dict(self):
-        if self.__zone == 1:
+        if self._zone == 1:
             color = "#00800033"
-        elif self.__zone == 2:
+        elif self._zone == 2:
             color = "#b59f0033"
-        elif self.__zone == 3:
+        elif self._zone == 3:
             color = "#cc000033"
         else:
             color = "white"
@@ -42,7 +42,7 @@ class WasteDisposalZone(mesa.Agent):
             model: A model instance
         """
         super().__init__(model)
-        self.__disposed_count = 0
+        self._disposed_count = 0
 
     def get_display_dict(self):
         return {
@@ -52,10 +52,10 @@ class WasteDisposalZone(mesa.Agent):
         }
     
     def add_waste(self):
-        self.__disposed_count += 1
+        self._disposed_count += 1
 
     def get_disposed_count(self):
-        return self.__disposed_count
+        return self._disposed_count
 
 class Waste(mesa.Agent):
     def __init__(self, model, color):

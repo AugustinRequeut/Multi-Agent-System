@@ -1,0 +1,8 @@
+Mesa==3.3.0
+matplotlib
+altair
+solara
+numpy
+seaborn
+starlette<1.0
+networkx

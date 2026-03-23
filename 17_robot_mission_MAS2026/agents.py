@@ -202,6 +202,39 @@ class RobotAgent(mesa.Agent):
         fallback = self.get_available_moves([Action.MOVE_RIGHT, Action.MOVE_LEFT, Action.MOVE_TOP, Action.MOVE_DOWN])
         return self.model.random.choice(fallback)
     
+    def move_to_left_border_zone(self):
+        if self.get_zone(self.pos) == self.color.value:
+            dx, dy = MOVE_COORDS[Action.MOVE_LEFT]
+            left_pos = (self.pos[0] + dx, self.pos[1] + dy)
+            
+            if left_pos not in self._knowledge:
+                moves = self.get_available_moves([Action.MOVE_TOP, Action.MOVE_DOWN, Action.MOVE_RIGHT])
+                return self.model.random.choice(moves)
+            
+            at_border = self.get_zone(left_pos) < self.color.value
+            if at_border:
+                moves = self.get_available_moves([Action.MOVE_TOP, Action.MOVE_DOWN])
+                return self.model.random.choice(moves)
+            
+            moves = self.get_available_moves([Action.MOVE_LEFT])
+            if moves:
+                return Action.MOVE_LEFT
+            
+            else:
+                # Blocked by another robot
+                bypass = self.get_available_moves([Action.MOVE_TOP, Action.MOVE_DOWN, Action.MOVE_RIGHT])
+                return self.model.random.choice(bypass)
+        else:            
+            moves = self.get_available_moves([Action.MOVE_RIGHT])
+            if moves:
+                return Action.MOVE_RIGHT
+            
+            else:
+                # Blocked by another robot
+                bypass = self.get_available_moves([Action.MOVE_TOP, Action.MOVE_DOWN, Action.MOVE_LEFT])
+                return self.model.random.choice(bypass)
+
+    
 class GreenRobotAgent(RobotAgent):
     def __init__(self, model):
         super().__init__(model, Color.GREEN, 2)
@@ -209,6 +242,42 @@ class GreenRobotAgent(RobotAgent):
 class YellowRobotAgent(RobotAgent):
     def __init__(self, model):
         super().__init__(model, Color.YELLOW, 2)
+
+    def _deliberate(self):
+        # Case 1: The robot carries an object ready to be deposited
+        if self.is_carrying_payload():
+            dx, dy = MOVE_COORDS[Action.MOVE_RIGHT]
+            right_pos = (self.pos[0] + dx, self.pos[1] + dy)
+            at_border = right_pos not in self._knowledge or not self.can_access_pos(right_pos)
+            
+            if at_border:
+                # If the case is free, deposit
+                if not self.get_objects_in_pos(self.pos, Waste):
+                    return Action.INTERACT
+                # Try to go to a free cell else
+                else:
+                    moves = self.get_available_moves([Action.MOVE_TOP, Action.MOVE_DOWN])
+                    return self.model.random.choice(moves)
+
+            # Move to the border of the accessible zone
+            moves = self.get_available_moves([Action.MOVE_RIGHT])
+            if moves:
+                return Action.MOVE_RIGHT
+            else:
+                # Blocked by another robot
+                bypass = self.get_available_moves([Action.MOVE_TOP, Action.MOVE_DOWN, Action.MOVE_LEFT])
+                return self.model.random.choice(bypass)
+                
+        # Case 2 : The robot is looking for a waste
+        else:
+            target_pos = self.find_target_waste()
+            
+            if target_pos == self.pos:
+                return Action.INTERACT
+            elif target_pos is not None:
+                return self.move_towards(target_pos)
+            else:
+                return self.move_to_left_border_zone()
 
 class RedRobotAgent(RobotAgent):
     def __init__(self, model):
@@ -256,8 +325,5 @@ class RedRobotAgent(RobotAgent):
             elif target_pos is not None:
                 return self.move_towards(target_pos)
             else:
-                all_moves = self.get_available_moves([Action.MOVE_RIGHT, Action.MOVE_LEFT, Action.MOVE_TOP, Action.MOVE_DOWN])
-                if all_moves:
-                    return self.model.random.choice(all_moves)
-                return Action.INTERACT
+                return self.move_to_left_border_zone()
     

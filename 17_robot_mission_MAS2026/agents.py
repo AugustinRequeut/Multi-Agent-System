@@ -203,6 +203,8 @@ class RobotAgent(mesa.Agent):
         return self.model.random.choice(fallback)
     
     def move_to_left_border_zone(self):
+        """Computes an action to approach the left border of the zone corresponding to the agent's color"""
+        # Case 1: The agent is in the zone corresponding to its color
         if self.get_zone(self.pos) == self.color.value:
             dx, dy = MOVE_COORDS[Action.MOVE_LEFT]
             left_pos = (self.pos[0] + dx, self.pos[1] + dy)
@@ -211,11 +213,13 @@ class RobotAgent(mesa.Agent):
                 moves = self.get_available_moves([Action.MOVE_TOP, Action.MOVE_DOWN, Action.MOVE_RIGHT])
                 return self.model.random.choice(moves)
             
+            # Moves up or down if the border is reached
             at_border = self.get_zone(left_pos) < self.color.value
             if at_border:
                 moves = self.get_available_moves([Action.MOVE_TOP, Action.MOVE_DOWN])
                 return self.model.random.choice(moves)
             
+            # Tries to move left otherwise
             moves = self.get_available_moves([Action.MOVE_LEFT])
             if moves:
                 return Action.MOVE_LEFT
@@ -224,7 +228,11 @@ class RobotAgent(mesa.Agent):
                 # Blocked by another robot
                 bypass = self.get_available_moves([Action.MOVE_TOP, Action.MOVE_DOWN, Action.MOVE_RIGHT])
                 return self.model.random.choice(bypass)
-        else:            
+            
+        # Case 2: The agent is in a zone at the left of its corresponding zone
+        else:
+
+            # Moves right if it can            
             moves = self.get_available_moves([Action.MOVE_RIGHT])
             if moves:
                 return Action.MOVE_RIGHT

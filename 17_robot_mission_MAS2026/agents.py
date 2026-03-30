@@ -1,7 +1,7 @@
 # Group 17 - Created 16/03/2026 - Martinelli, Requeut
 
 import mesa
-from utils import Action, Color, COLOR_MAPPING, MOVE_COORDS, RobotState, ISOLATION_LIMIT, ANSWER_LIMIT, WAITING_FOR_ARRIVAL_LIMIT
+from utils import Action, Color, COLOR_MAPPING, MOVE_COORDS, RobotState, ISOLATION_LIMIT, ANSWER_LIMIT, WAITING_FOR_ARRIVAL_LIMIT, WAITING_ACCEPTANCE_LIMIT, WAITING_COLLECT_LIMIT
 from abc import abstractmethod
 from objects import Waste, Radioactivity, WasteDisposalZone
 from math import ceil
@@ -47,9 +47,20 @@ class RobotAgent(CommunicatingAgent):
         if self.state == RobotState.NORMAL:
             if self.color == Color.GREEN or self.color == Color.YELLOW: # Only green and yellow robots will try to exchange wastes
                 self._update_state()
+        
+            # Check if he can accept a potential trade
+            if self._content[self.color] == 1 and not self.is_carrying_payload():
+                new_msgs = self.get_new_messages()
+                cfps = [m for m in new_msgs if m.get_performative() == MessagePerformative.CFP]
+                if cfps:
+                    msg = cfps[0]
+                    self.partner_id = msg.get_exp()
+                    self.state = RobotState.EVALUATING_CFP
+                    return Action.COMMUNICATE
+                
             return self._behavior_normal()
         
-        elif self.state in [RobotState.SEEKING_PARTNER, RobotState.WAITING_PROPOSALS, RobotState.SELECTING_PARTNER, RobotState.WAITING_FOR_ARRIVAL, RobotState.STEPPING_ASIDE]:
+        elif self.state in [RobotState.SEEKING_PARTNER, RobotState.WAITING_PROPOSALS, RobotState.SELECTING_PARTNER, RobotState.DROPPING_WASTE, RobotState.WAITING_FOR_ARRIVAL, RobotState.STEPPING_ASIDE, RobotState.WAIT_FOR_COLLECT]:
             return self._behavior_initiator()
             
         elif self.state in [RobotState.EVALUATING_CFP, RobotState.WAITING_ACCEPTANCE, RobotState.TRAVELING_TO_RDV, RobotState.COLLECTING_WASTE]:
@@ -73,8 +84,8 @@ class RobotAgent(CommunicatingAgent):
 
             # Move to the border of the accessible zone
             moves = self.get_available_moves([Action.MOVE_RIGHT])
-            if moves:
-                return Action.MOVE_RIGHT
+            if moves != [Action.NOOP]:
+                return self.model.random.choice(moves)
             else:
                 # Blocked by another robot
                 bypass = self.get_available_moves([Action.MOVE_TOP, Action.MOVE_DOWN, Action.MOVE_LEFT])
@@ -93,6 +104,7 @@ class RobotAgent(CommunicatingAgent):
                 return self.model.random.choice(all_moves)
 
     def _behavior_initiator(self):
+        # print(f"{self.get_name()}: {self.state}")
         if self.state == RobotState.SEEKING_PARTNER:
             for agent in self.model.agents:
                 if isinstance(agent, RobotAgent) and agent.color == self.color and agent != self:
@@ -109,15 +121,23 @@ class RobotAgent(CommunicatingAgent):
                 self.state = RobotState.NORMAL
                 return Action.NOOP
             
-            proposals = self.get_messages_from_performative(MessagePerformative.PROPOSE)
+            new_msgs = self.get_new_messages()
+            proposals = [m for m in new_msgs if m.get_performative() == MessagePerformative.PROPOSE]
+            
             if proposals:
                 msg = proposals[0]
                 self.partner_id = msg.get_exp()
                 self.state = RobotState.SELECTING_PARTNER
-                self.get_new_messages() # Clear mailbox
                 return Action.COMMUNICATE
             
-            return Action.INTERACT
+            # Go to the right for an possible exchange get further to facilitate exchange
+            moves = self.get_available_moves([Action.MOVE_RIGHT])
+            if moves != [Action.NOOP]:
+                return self.model.random.choice(moves)
+            else:
+                # Blocked by another robot
+                bypass = self.get_available_moves([Action.MOVE_TOP, Action.MOVE_DOWN, Action.MOVE_LEFT])
+                return self.model.random.choice(bypass)
         
         elif self.state == RobotState.SELECTING_PARTNER:
             # TO DO : Improve rendez-vous point logic (e.g. farther than zone limit to avoid being blocked)
@@ -142,28 +162,108 @@ class RobotAgent(CommunicatingAgent):
                 self.state = RobotState.NORMAL
                 self.partner_id = None
                 return Action.INTERACT
-            arrivals = self.get_messages_from_performative(MessagePerformative.INFORM)
+            new_msgs = self.get_new_messages()
+            arrivals = [m for m in new_msgs if m.get_performative() == MessagePerformative.INFORM]
             for msg in arrivals:
                 if msg.get_exp() == self.partner_id and msg.get_content() == "Arrived":
                     self.state = RobotState.STEPPING_ASIDE
-                    self.get_new_messages() # Clear mailbox
                     return Action.COMMUNICATE
             return Action.NOOP
         
         elif self.state == RobotState.STEPPING_ASIDE:
             # If we haved moved, we freed the place as intended
             if self.pos != self.rendezvous_pos:
-                self.state = RobotState.NORMAL
+                self.state = RobotState.WAIT_FOR_COLLECT
                 self.partner_id = None
                 self.rendezvous_pos = None
+                self.timeout_counter = 0
+                return Action.NOOP
             
             moves = self.get_available_moves([Action.MOVE_RIGHT, Action.MOVE_LEFT, Action.MOVE_TOP, Action.MOVE_DOWN])
             if moves:
                 return self.model.random.choice(moves)
-            return Action.INTERACT
         
+        # Let time for the other robot to collect
+        elif self.state == RobotState.WAIT_FOR_COLLECT:
+            self.timeout_counter += 1
+            if self.timeout_counter > 2:
+                self.state = RobotState.NORMAL
+            return Action.NOOP
+
     def _behavior_participant(self):
-        pass
+        # print(f"{self.get_name()}: {self.state}")
+        if self.state == RobotState.EVALUATING_CFP:
+            msg = Message(self.get_name(), self.partner_id, MessagePerformative.PROPOSE, "Available")
+            self.send_message(msg)
+            self.state = RobotState.WAITING_ACCEPTANCE
+            self.timeout_counter = 0
+            return Action.COMMUNICATE
+
+        elif self.state == RobotState.WAITING_ACCEPTANCE:
+            self.timeout_counter += 1
+            if self.timeout_counter > WAITING_ACCEPTANCE_LIMIT:
+                self.state = RobotState.NORMAL
+                self.partner_id = None
+                return Action.NOOP
+
+            new_msgs = self.get_new_messages()
+            acceptances = [m for m in new_msgs if m.get_performative() == MessagePerformative.ACCEPT_PROPOSAL]
+
+            for msg in acceptances:
+                if msg.get_exp() == self.partner_id:
+                    self.rendezvous_pos = msg.get_content()
+                    self.state = RobotState.TRAVELING_TO_RDV
+                    self.timeout_counter = 0
+                    return Action.COMMUNICATE
+            
+            return self._behavior_normal()
+
+        elif self.state == RobotState.TRAVELING_TO_RDV:
+            self.timeout_counter += 1
+            if self.timeout_counter > WAITING_FOR_ARRIVAL_LIMIT:
+                self.state = RobotState.NORMAL
+                self.partner_id = None
+                self.rendezvous_pos = None
+                return Action.NOOP
+
+            dx = abs(self.pos[0] - self.rendezvous_pos[0])
+            dy = abs(self.pos[1] - self.rendezvous_pos[1])
+            
+            if dx + dy == 1: 
+                msg = Message(self.get_name(), self.partner_id, MessagePerformative.INFORM, "Arrived")
+                self.send_message(msg)
+                self.state = RobotState.COLLECTING_WASTE
+                self.timeout_counter = 0
+                return Action.COMMUNICATE
+            else:
+                return self.move_towards(self.rendezvous_pos)
+
+        elif self.state == RobotState.COLLECTING_WASTE:
+            self.timeout_counter += 1
+            if self.timeout_counter > WAITING_COLLECT_LIMIT:
+                self.state = RobotState.NORMAL
+                self.partner_id = None
+                self.rendezvous_pos = None
+                return Action.NOOP
+
+
+            if self.pos == self.rendezvous_pos:
+                self.state = RobotState.NORMAL
+                self.partner_id = None
+                self.rendezvous_pos = None
+                print("Exchange was successfull")
+                return Action.INTERACT
+
+            if self.rendezvous_pos[0] > self.pos[0]:
+                return Action.MOVE_RIGHT
+            elif self.rendezvous_pos[0] < self.pos[0]:
+                return Action.MOVE_LEFT
+            elif self.rendezvous_pos[1] > self.pos[1]:
+                return Action.MOVE_TOP
+            elif self.rendezvous_pos[1] < self.pos[1]:
+                return Action.MOVE_DOWN
+
+            raise ValueError("Robot moved further from rendez-vous point in COLLECTING WASTE state.")
 
     def get_display_dict(self):
         if self.state != RobotState.NORMAL:
@@ -324,8 +424,8 @@ class RobotAgent(CommunicatingAgent):
             
             # Tries to move left otherwise
             moves = self.get_available_moves([Action.MOVE_LEFT])
-            if moves:
-                return Action.MOVE_LEFT
+            if moves != [Action.NOOP]:
+                return self.model.random.choice(moves)
             
             else:
                 # Blocked by another robot
@@ -337,8 +437,8 @@ class RobotAgent(CommunicatingAgent):
 
             # Moves right if it can            
             moves = self.get_available_moves([Action.MOVE_RIGHT])
-            if moves:
-                return Action.MOVE_RIGHT
+            if moves != [Action.NOOP]:
+                return self.model.random.choice(moves)
             
             else:
                 # Blocked by another robot
@@ -382,8 +482,8 @@ class YellowRobotAgent(RobotAgent):
 
             # Move to the border of the accessible zone
             moves = self.get_available_moves([Action.MOVE_RIGHT])
-            if moves:
-                return Action.MOVE_RIGHT
+            if moves != [Action.NOOP]:
+                return self.model.random.choice(moves)
             else:
                 # Blocked by another robot
                 bypass = self.get_available_moves([Action.MOVE_TOP, Action.MOVE_DOWN, Action.MOVE_LEFT])
@@ -421,7 +521,7 @@ class RedRobotAgent(RobotAgent):
             # The robot is at the border
             if right_pos not in self._knowledge: 
                 moves = self.get_available_moves([Action.MOVE_TOP, Action.MOVE_DOWN])
-                if moves:
+                if moves != [Action.NOOP]:
                     return self.model.random.choice(moves)
                 else:
                     # Blocked by another robot
@@ -430,8 +530,8 @@ class RedRobotAgent(RobotAgent):
 
             # Move to the right border
             moves = self.get_available_moves([Action.MOVE_RIGHT])
-            if moves:
-                return Action.MOVE_RIGHT
+            if moves != [Action.NOOP]:
+                return self.model.random.choice(moves)
             else:
                 # Blocked by another robot
                 bypass = self.get_available_moves([Action.MOVE_TOP, Action.MOVE_DOWN, Action.MOVE_LEFT])

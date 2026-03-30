@@ -21,12 +21,13 @@ class RobotState(Enum):
     DROPPING_WASTE = 5
     WAITING_FOR_ARRIVAL = 6
     STEPPING_ASIDE = 7
+    WAIT_FOR_COLLECT = 8
     
     # State of colaborator
-    EVALUATING_CFP = 8
-    WAITING_ACCEPTANCE = 9
-    TRAVELING_TO_RDV = 10
-    COLLECTING_WASTE = 11
+    EVALUATING_CFP = 9
+    WAITING_ACCEPTANCE = 10
+    TRAVELING_TO_RDV = 11
+    COLLECTING_WASTE = 12
 
 class Color(Enum): # Enum value is used to match zones values
     GREEN = 1
@@ -47,5 +48,7 @@ COLOR_MAPPING = {
 }
 
 ISOLATION_LIMIT = 40 # Time until which the robot starts looking for a partner to exchange
-ANSWER_LIMIT = 10 # Time until which the robot stops waiting for a response
+ANSWER_LIMIT = 5 # Time until which the robot stops waiting for a response
 WAITING_FOR_ARRIVAL_LIMIT = 40 # Time until which the robot stops waiting for a its partner arrival
+WAITING_ACCEPTANCE_LIMIT = 15 # Time until which the robot stops waiting to be accepted
+WAITING_COLLECT_LIMIT = 20 # Time until which the robot stops waiting to collect waste

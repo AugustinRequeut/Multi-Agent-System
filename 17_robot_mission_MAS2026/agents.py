@@ -1,25 +1,36 @@
 # Group 17 - Created 16/03/2026 - Martinelli, Requeut
 
 import mesa
-from utils import Action, Color, COLOR_MAPPING, MOVE_COORDS
+from utils import Action, Color, COLOR_MAPPING, MOVE_COORDS, RobotState
 from abc import abstractmethod
 from objects import Waste, Radioactivity, WasteDisposalZone
 from math import ceil
 
-class RobotAgent(mesa.Agent):
+from communication.agent.CommunicatingAgent import CommunicatingAgent
+
+class RobotAgent(CommunicatingAgent):
     def __init__(self, model, color, max_waste):
         """Base class for Robot Agents.
 
         Args:
             model: A model instance
         """
-        super().__init__(model)
+        model.agent_counter += 1
+        agent_name = f"{color.name}_{model.agent_counter}"
+        super().__init__(model, name=agent_name)
         self._knowledge = None
         self._max_waste = max_waste
         self._content = {
             color: 0 for color in Color
         }
         self.color = color
+
+        # Communication
+        self.state = RobotState.NORMAL
+        self.isolation_counter = 0 # Time with 1 waste without partner
+        self.timeout_counter = 0 # Counter to avoid deadlock
+        self.partner_id = None
+        self.rendezvous_pos = None
 
     def step_agent(self):
         percepts = self.model.get_percepts(self)
@@ -30,8 +41,17 @@ class RobotAgent(mesa.Agent):
     def _update(self, percepts):
         self._knowledge = percepts
 
-    @abstractmethod
     def _deliberate(self):
+        if self.state == RobotState.NORMAL:
+            return self._behavior_normal()
+        
+        elif self.state in [RobotState.SEEKING_PARTNER, RobotState.WAITING_PROPOSALS, RobotState.SELECTING_PARTNER, RobotState.WAITING_FOR_ARRIVAL, RobotState.STEPPING_ASIDE]:
+            return self._behavior_initiator()
+            
+        elif self.state in [RobotState.EVALUATING_CFP, RobotState.WAITING_ACCEPTANCE, RobotState.TRAVELING_TO_RDV, RobotState.COLLECTING_WASTE]:
+            return self._behavior_participant()
+
+    def _behavior_normal(self):
         # Case 1: The robot carries an object ready to be deposited
         if self.is_carrying_payload():
             dx, dy = MOVE_COORDS[Action.MOVE_RIGHT]
@@ -67,7 +87,13 @@ class RobotAgent(mesa.Agent):
             else:
                 all_moves = self.get_available_moves([Action.MOVE_RIGHT, Action.MOVE_LEFT, Action.MOVE_TOP, Action.MOVE_DOWN])
                 return self.model.random.choice(all_moves)
-    
+
+    def _behavior_initiator(self):
+        pass
+        
+    def _behavior_participant(self):
+        pass
+
     def get_display_dict(self):
         return {
             "size": 50,
@@ -251,7 +277,7 @@ class YellowRobotAgent(RobotAgent):
     def __init__(self, model):
         super().__init__(model, Color.YELLOW, 2)
 
-    def _deliberate(self):
+    def _behavior_normal(self):
         # Case 1: The robot carries an object ready to be deposited
         if self.is_carrying_payload():
             dx, dy = MOVE_COORDS[Action.MOVE_RIGHT]
@@ -291,7 +317,7 @@ class RedRobotAgent(RobotAgent):
     def __init__(self, model):
         super().__init__(model, Color.RED, 1)
     
-    def _deliberate(self):
+    def _behavior_normal(self):
         # Case 1: The robot carries an red waste ready to be deposited
         if self.is_carrying_payload():
             if self.get_objects_in_pos(self.pos, WasteDisposalZone):

@@ -6,6 +6,7 @@ from mesa.space import MultiGrid
 from agents import RobotAgent, GreenRobotAgent, RedRobotAgent, YellowRobotAgent
 from objects import Radioactivity, WasteDisposalZone, Waste
 from utils import Action, Color, MOVE_COORDS
+from communication.message.MessageService import MessageService
 
 def compute_waste_by_color(model, color):
         total_waste = 0
@@ -45,6 +46,16 @@ class RobotMission(Model):
 
         super().__init__(seed=seed)
 
+        # Reset message service
+        if hasattr(MessageService, "_MessageService__instance"):
+            MessageService._MessageService__instance = None
+        elif hasattr(MessageService, "_instance"):
+            MessageService._instance = None
+        elif hasattr(MessageService, "__instance"):
+            MessageService.__instance = None
+
+        self._message_service = MessageService(self, instant_delivery=False)
+
         self.datacollector = DataCollector(
             model_reporters={
                 "Green Waste": lambda m: compute_waste_by_color(m, Color.GREEN),
@@ -67,6 +78,7 @@ class RobotMission(Model):
             self.grid.place_agent(Radioactivity(self, self._get_zone(pos)), pos)
 
         # Init Robots
+        self.agent_counter = 0
         agents = [GreenRobotAgent(self) for _ in range(number_of_green_robots)] + [YellowRobotAgent(self) for _ in range(number_of_yellow_robots)] + [RedRobotAgent(self) for _ in range(number_of_red_robots)]
         robot_positions = self.random.sample(z1_coords, len(agents))
         for agent, pos in zip(agents, robot_positions):
@@ -94,6 +106,7 @@ class RobotMission(Model):
             return 3
 
     def step(self):
+        self._message_service.dispatch_messages()
         self.agents.select(lambda agent: isinstance(agent, RobotAgent)).shuffle_do("step_agent")
         self.datacollector.collect(self)
     
@@ -106,6 +119,9 @@ class RobotMission(Model):
 
         elif action == Action.INTERACT:
             self._handle_interaction(agent)
+
+        elif action == Action.COMMUNICATE:
+            pass
     
     def _handle_move(self, agent: RobotAgent, action):
         """Handle agent movement and ensure the move is valid."""

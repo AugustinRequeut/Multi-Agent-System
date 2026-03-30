@@ -9,6 +9,23 @@ class Action(Enum):
     MOVE_DOWN = 4
     NOOP = 5
     INTERACT = 6
+    COMMUNICATE = 7
+
+class RobotState(Enum):
+    NORMAL = 1
+    
+    # State of initiator
+    SEEKING_PARTNER = 2
+    WAITING_PROPOSALS = 3
+    SELECTING_PARTNER = 4
+    WAITING_FOR_ARRIVAL = 5
+    STEPPING_ASIDE = 6
+    
+    # State of colaborator
+    EVALUATING_CFP = 7
+    WAITING_ACCEPTANCE = 8
+    TRAVELING_TO_RDV = 9
+    COLLECTING_WASTE = 10
 
 class Color(Enum): # Enum value is used to match zones values
     GREEN = 1

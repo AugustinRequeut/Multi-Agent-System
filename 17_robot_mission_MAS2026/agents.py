@@ -1,12 +1,14 @@
 # Group 17 - Created 16/03/2026 - Martinelli, Requeut
 
 import mesa
-from utils import Action, Color, COLOR_MAPPING, MOVE_COORDS, RobotState
+from utils import Action, Color, COLOR_MAPPING, MOVE_COORDS, RobotState, ISOLATION_LIMIT, ANSWER_LIMIT, WAITING_FOR_ARRIVAL_LIMIT
 from abc import abstractmethod
 from objects import Waste, Radioactivity, WasteDisposalZone
 from math import ceil
 
 from communication.agent.CommunicatingAgent import CommunicatingAgent
+from communication.message.Message import Message
+from communication.message.MessagePerformative import MessagePerformative
 
 class RobotAgent(CommunicatingAgent):
     def __init__(self, model, color, max_waste):
@@ -43,6 +45,8 @@ class RobotAgent(CommunicatingAgent):
 
     def _deliberate(self):
         if self.state == RobotState.NORMAL:
+            if self.color == Color.GREEN or self.color == Color.YELLOW: # Only green and yellow robots will try to exchange wastes
+                self._update_state()
             return self._behavior_normal()
         
         elif self.state in [RobotState.SEEKING_PARTNER, RobotState.WAITING_PROPOSALS, RobotState.SELECTING_PARTNER, RobotState.WAITING_FOR_ARRIVAL, RobotState.STEPPING_ASIDE]:
@@ -89,12 +93,85 @@ class RobotAgent(CommunicatingAgent):
                 return self.model.random.choice(all_moves)
 
     def _behavior_initiator(self):
-        pass
+        if self.state == RobotState.SEEKING_PARTNER:
+            for agent in self.model.agents:
+                if isinstance(agent, RobotAgent) and agent.color == self.color and agent != self:
+                    msg = Message(self.get_name(), agent.get_name(), MessagePerformative.CFP, "Need partner")
+                    self.send_message(msg)
+            
+            self.state = RobotState.WAITING_PROPOSALS
+            self.timeout_counter = 0
+            return Action.COMMUNICATE
+        
+        elif self.state == RobotState.WAITING_PROPOSALS:
+            self.timeout_counter += 1
+            if self.timeout_counter > ANSWER_LIMIT:
+                self.state = RobotState.NORMAL
+                return Action.NOOP
+            
+            proposals = self.get_messages_from_performative(MessagePerformative.PROPOSE)
+            if proposals:
+                msg = proposals[0]
+                self.partner_id = msg.get_exp()
+                self.state = RobotState.SELECTING_PARTNER
+                self.get_new_messages() # Clear mailbox
+                return Action.COMMUNICATE
+            
+            return Action.INTERACT
+        
+        elif self.state == RobotState.SELECTING_PARTNER:
+            # TO DO : Improve rendez-vous point logic (e.g. farther than zone limit to avoid being blocked)
+            self.rendezvous_pos = self.pos
+            
+            msg = Message(self.get_name(), self.partner_id, MessagePerformative.ACCEPT_PROPOSAL, self.rendezvous_pos)
+            self.send_message(msg)
+
+            self.state = RobotState.DROPPING_WASTE
+            return Action.COMMUNICATE
+            
+        elif self.state == RobotState.DROPPING_WASTE:
+            self.state = RobotState.WAITING_FOR_ARRIVAL
+            self.timeout_counter = 0
+            return Action.INTERACT
+        
+        elif self.state == RobotState.WAITING_FOR_ARRIVAL:
+            self.timeout_counter += 1
+            
+            # If the partner did not come, we pick up back the waste
+            if self.timeout_counter > WAITING_FOR_ARRIVAL_LIMIT:
+                self.state = RobotState.NORMAL
+                self.partner_id = None
+                return Action.INTERACT
+            arrivals = self.get_messages_from_performative(MessagePerformative.INFORM)
+            for msg in arrivals:
+                if msg.get_exp() == self.partner_id and msg.get_content() == "Arrived":
+                    self.state = RobotState.STEPPING_ASIDE
+                    self.get_new_messages() # Clear mailbox
+                    return Action.COMMUNICATE
+            return Action.NOOP
+        
+        elif self.state == RobotState.STEPPING_ASIDE:
+            # If we haved moved, we freed the place as intended
+            if self.pos != self.rendezvous_pos:
+                self.state = RobotState.NORMAL
+                self.partner_id = None
+                self.rendezvous_pos = None
+            
+            moves = self.get_available_moves([Action.MOVE_RIGHT, Action.MOVE_LEFT, Action.MOVE_TOP, Action.MOVE_DOWN])
+            if moves:
+                return self.model.random.choice(moves)
+            return Action.INTERACT
         
     def _behavior_participant(self):
         pass
 
     def get_display_dict(self):
+        if self.state != RobotState.NORMAL:
+            return {
+            "size": 50, 
+            "color": COLOR_MAPPING.get(self.color, "black"),
+            "marker": "<",
+        }
         return {
             "size": 50,
             "color": COLOR_MAPPING.get(self.color, "black"),
@@ -267,6 +344,16 @@ class RobotAgent(CommunicatingAgent):
                 # Blocked by another robot
                 bypass = self.get_available_moves([Action.MOVE_TOP, Action.MOVE_DOWN, Action.MOVE_LEFT])
                 return self.model.random.choice(bypass)
+            
+    def _update_state(self):
+        if self._content[self.color] == 1 and not self.is_carrying_payload():
+            self.isolation_counter += 1
+            if self.isolation_counter > ISOLATION_LIMIT:
+                self.state = RobotState.SEEKING_PARTNER
+                self.isolation_counter = 0
+                return Action.COMMUNICATE
+        else:
+            self.isolation_counter = 0
 
     
 class GreenRobotAgent(RobotAgent):

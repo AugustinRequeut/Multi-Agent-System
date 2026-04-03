@@ -525,37 +525,43 @@ class YellowRobotAgent(RobotAgent):
 class RedRobotAgent(RobotAgent):
     def __init__(self, model):
         super().__init__(model, Color.RED, 1)
+        self._disposal_zone_pos = None
     
+    def _update(self, percepts):
+        super()._update(percepts)
+        
+        if self._disposal_zone_pos is None:
+            for pos, contents in percepts.items():
+                if any(isinstance(obj, WasteDisposalZone) for obj in contents):
+                    self._disposal_zone_pos = pos
+                    break
+
     def _behavior_normal(self):
         # Case 1: The robot carries an red waste ready to be deposited
         if self.is_carrying_payload():
             if self.get_objects_in_pos(self.pos, WasteDisposalZone):
                 return Action.INTERACT
-                
-            # Look for the disposal zone
-            for pos, contents in self._knowledge.items():
-                if any(isinstance(obj, WasteDisposalZone) for obj in contents):
-                    return self.move_towards(pos)
+            
+            # The robot knows where the waste disposal zone is
+            if self._disposal_zone_pos is not None:
+                return self.move_towards(self._disposal_zone_pos)
 
             dx, dy = MOVE_COORDS[Action.MOVE_RIGHT]
             right_pos = (self.pos[0] + dx, self.pos[1] + dy)
-            
+
             # The robot is at the border
             if right_pos not in self._knowledge: 
                 moves = self.get_available_moves([Action.MOVE_TOP, Action.MOVE_DOWN])
                 if moves != [Action.NOOP]:
                     return self._choose_random_move(moves)
                 else:
-                    # Blocked by another robot
                     bypass = self.get_available_moves([Action.MOVE_LEFT])
                     return self._choose_random_move(bypass)
 
-            # Move to the right border
             moves = self.get_available_moves([Action.MOVE_RIGHT])
             if moves != [Action.NOOP]:
                 return self._choose_random_move(moves)
             else:
-                # Blocked by another robot
                 bypass = self.get_available_moves([Action.MOVE_TOP, Action.MOVE_DOWN, Action.MOVE_LEFT])
                 return self._choose_random_move(bypass)
                 
@@ -569,4 +575,3 @@ class RedRobotAgent(RobotAgent):
                 return self.move_towards(target_pos)
             else:
                 return self.move_to_left_border_zone()
-    

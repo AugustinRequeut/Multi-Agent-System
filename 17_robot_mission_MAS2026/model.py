@@ -105,12 +105,12 @@ class RobotMission(Model):
                 self.grid.place_agent(waste, pos)
         
         for pos in z2_coords:
-            if self.random.random() <= initial_waste_density_green:
+            if self.random.random() <= initial_waste_density_yellow:
                 waste = Waste(self, Color.YELLOW)
                 self.grid.place_agent(waste, pos)
 
         for pos in z3_coords:
-            if self.random.random() <= initial_waste_density_green:
+            if self.random.random() <= initial_waste_density_red:
                 waste = Waste(self, Color.RED)
                 self.grid.place_agent(waste, pos)
 

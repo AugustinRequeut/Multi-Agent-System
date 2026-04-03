@@ -36,8 +36,9 @@ solara run server.py
 
 **Current Status**
 
-- **Completed**: Environment setup and reactive agents implementation.
-- **In Progress**: Addition of inter-agent communication.
+- **Completed**: 
+  - Environment setup and reactive agents implementation.
+  - Addition of inter-agent communication.
 
 **Technical Choices**
 
@@ -45,8 +46,19 @@ solara run server.py
   - No spatial superposition allowed for wastes.
   - No spatial superposition allowed for robots.
 - **Agent Behavior**:
-  - Robots are programmed to deposit wastes to their right.
-  - Navigation is currently handled via random moves if no waste in their neighborhood
+  - Robots are programmed to move towards wastes of their color in their Moore neighborhood if they do not carry a waste payload, and to pick them once they have reached them.
+  - They are designed to deposit waste payloads to the right border of the zone of their color.
+  - Navigation is currently handled via random moves (with inertia) if there is no waste in their neighborhood.
+    - An inertia decay factor is used to update the inertia of an agent according to its last move. 
+    - An inertia power is used to determine the impact of the inertia on the choice of the random move.
+  - Red robots remember the location of the disposal zone once first discovered. 
+  - If green and yellow robots have exceeded a number of steps carrying one waste of their color, a communication process begin:
+    - An agent in that situation sends a message to other agents to ask for an exchange of wastes.
+    - Agents in the same situation can propose themselves for the exchange.
+    - The agent chooses one of them (if there is at least one) and gives its position.
+    - Once the other agent has reached it, it sends a message to the agent.
+    - The agent deposit its waste and the other agent pick it.  
+    - Each stage of this process has a limit of steps to avoid deadlocked cases.
 
 **Metrics Tracked**
 
@@ -55,4 +67,4 @@ solara run server.py
 
 **Results and Current Limitations**
 
-- Deadlock Issue: The system currently reaches a blocked state with unrecycled wastes remaining. Because agents are restricted from depositing a waste if it has not been transformed, robots end up holding onto single wastes indefinitely. This depletes the grid of available wastes and brings the recycling process to a halt. This issue will be fixed with communication.
+- Even with inertia, the random navigation is still not sufficient enough to efficiently detect and pick all wastes.

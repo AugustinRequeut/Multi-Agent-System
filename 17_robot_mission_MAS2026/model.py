@@ -29,7 +29,7 @@ def compute_disposed_waste(model):
 
 class RobotMission(Model):
     """A model with some number of agents."""
-    def __init__(self, number_of_green_robots=1, number_of_yellow_robots=1, number_of_red_robots=1, initial_waste_density=0.1, width_z1=10, width_z2=10, width_z3=10, height=30, seed=None):
+    def __init__(self, number_of_green_robots=1, number_of_yellow_robots=1, number_of_red_robots=1, initial_waste_density=0.1, width_z1=10, width_z2=10, width_z3=10, height=30, seed=None, alpha=0.2, k=3):
         """Initialize the model.
 
         Args:
@@ -42,7 +42,11 @@ class RobotMission(Model):
             width_z3 (int, optional): z3 grid width. Defaults to 10.
             height (int, optional): Grid height. Defaults to 30.
             seed (int, optional): Random seed. Defaults to None.
+            alpha (float):
+            k (float):
         """
+        self.alpha = alpha
+        self.k = k 
 
         super().__init__(seed=seed)
 

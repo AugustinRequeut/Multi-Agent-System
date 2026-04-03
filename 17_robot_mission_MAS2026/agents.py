@@ -4,7 +4,7 @@ import mesa
 from utils import Action, Color, COLOR_MAPPING, MOVE_COORDS, RobotState, ISOLATION_LIMIT, ANSWER_LIMIT, WAITING_FOR_ARRIVAL_LIMIT, WAITING_ACCEPTANCE_LIMIT, WAITING_COLLECT_LIMIT
 from abc import abstractmethod
 from objects import Waste, Radioactivity, WasteDisposalZone
-from math import ceil
+from math import ceil, exp
 
 from communication.agent.CommunicatingAgent import CommunicatingAgent
 from communication.message.Message import Message
@@ -21,6 +21,8 @@ class RobotAgent(CommunicatingAgent):
         agent_name = f"{color.name}_{model.agent_counter}"
         super().__init__(model, name=agent_name)
         self._knowledge = None
+        self._inertia = [0,0]
+        self._last_pos = None
         self._max_waste = max_waste
         self._content = {
             color: 0 for color in Color
@@ -42,6 +44,26 @@ class RobotAgent(CommunicatingAgent):
     
     def _update(self, percepts):
         self._knowledge = percepts
+
+        if self._last_pos is not None and self._last_pos!=self.pos:
+            dx = self.pos[0] - self._last_pos[0]
+            dy = self.pos[1] - self._last_pos[1]
+
+            self._inertia[0] = self.model.alpha * self._inertia[0] + (1 - self.model.alpha) * dx
+            self._inertia[1] = self.model.alpha * self._inertia[1] + (1 - self.model.alpha) * dy
+        
+        self._last_pos = self.pos
+    
+    def _choose_random_move(self, moves):
+
+        weights = []
+
+        for move in moves:
+            dx, dy = MOVE_COORDS[move]
+            weight = exp(self.model.k * (self._inertia[0]*dx + self._inertia[1]*dy))
+            weights.append(weight) 
+
+        return self.model.random.choices(moves, weights=weights, k=1)[0]
 
     def _deliberate(self):
         if self.state == RobotState.NORMAL:
@@ -80,16 +102,16 @@ class RobotAgent(CommunicatingAgent):
                 # Try to go to a free cell else
                 else:
                     moves = self.get_available_moves([Action.MOVE_TOP, Action.MOVE_DOWN])
-                    return self.model.random.choice(moves)
+                    return self._choose_random_move(moves)
 
             # Move to the border of the accessible zone
             moves = self.get_available_moves([Action.MOVE_RIGHT])
             if moves != [Action.NOOP]:
-                return self.model.random.choice(moves)
+                return self._choose_random_move(moves)
             else:
                 # Blocked by another robot
                 bypass = self.get_available_moves([Action.MOVE_TOP, Action.MOVE_DOWN, Action.MOVE_LEFT])
-                return self.model.random.choice(bypass)
+                return self._choose_random_move(bypass)
                 
         # Case 2 : The robot is looking for a waste
         else:
@@ -101,7 +123,7 @@ class RobotAgent(CommunicatingAgent):
                 return self.move_towards(target_pos)
             else:
                 all_moves = self.get_available_moves([Action.MOVE_RIGHT, Action.MOVE_LEFT, Action.MOVE_TOP, Action.MOVE_DOWN])
-                return self.model.random.choice(all_moves)
+                return self._choose_random_move(all_moves)
 
     def _behavior_initiator(self):
         # print(f"{self.get_name()}: {self.state}")
@@ -133,11 +155,11 @@ class RobotAgent(CommunicatingAgent):
             # Go to the right for an possible exchange get further to facilitate exchange
             moves = self.get_available_moves([Action.MOVE_RIGHT])
             if moves != [Action.NOOP]:
-                return self.model.random.choice(moves)
+                return self._choose_random_move(moves)
             else:
                 # Blocked by another robot
                 bypass = self.get_available_moves([Action.MOVE_TOP, Action.MOVE_DOWN, Action.MOVE_LEFT])
-                return self.model.random.choice(bypass)
+                return self._choose_random_move(bypass)
         
         elif self.state == RobotState.SELECTING_PARTNER:
             # TO DO : Improve rendez-vous point logic (e.g. farther than zone limit to avoid being blocked)
@@ -181,7 +203,7 @@ class RobotAgent(CommunicatingAgent):
             
             moves = self.get_available_moves([Action.MOVE_RIGHT, Action.MOVE_LEFT, Action.MOVE_TOP, Action.MOVE_DOWN])
             if moves:
-                return self.model.random.choice(moves)
+                return self._choose_random_move(moves)
         
         # Let time for the other robot to collect
         elif self.state == RobotState.WAIT_FOR_COLLECT:
@@ -399,11 +421,11 @@ class RobotAgent(CommunicatingAgent):
         # Try direct move
         available = self.get_available_moves(preferred)
         if available:
-            return self.model.random.choice(available)
+            return self._choose_random_move(available)
             
         # If path is blocked, random moove
         fallback = self.get_available_moves([Action.MOVE_RIGHT, Action.MOVE_LEFT, Action.MOVE_TOP, Action.MOVE_DOWN])
-        return self.model.random.choice(fallback)
+        return self._choose_random_move(fallback)
     
     def move_to_left_border_zone(self):
         """Computes an action to approach the left border of the zone corresponding to the agent's color"""
@@ -414,23 +436,23 @@ class RobotAgent(CommunicatingAgent):
             
             if left_pos not in self._knowledge:
                 moves = self.get_available_moves([Action.MOVE_TOP, Action.MOVE_DOWN, Action.MOVE_RIGHT])
-                return self.model.random.choice(moves)
+                return self._choose_random_move(moves)
             
             # Moves up or down if the border is reached
             at_border = self.get_zone(left_pos) < self.color.value
             if at_border:
                 moves = self.get_available_moves([Action.MOVE_TOP, Action.MOVE_DOWN])
-                return self.model.random.choice(moves)
+                return self._choose_random_move(moves)
             
             # Tries to move left otherwise
             moves = self.get_available_moves([Action.MOVE_LEFT])
             if moves != [Action.NOOP]:
-                return self.model.random.choice(moves)
+                return self._choose_random_move(moves)
             
             else:
                 # Blocked by another robot
                 bypass = self.get_available_moves([Action.MOVE_TOP, Action.MOVE_DOWN, Action.MOVE_RIGHT])
-                return self.model.random.choice(bypass)
+                return self._choose_random_move(bypass)
             
         # Case 2: The agent is in a zone at the left of its corresponding zone
         else:
@@ -438,12 +460,12 @@ class RobotAgent(CommunicatingAgent):
             # Moves right if it can            
             moves = self.get_available_moves([Action.MOVE_RIGHT])
             if moves != [Action.NOOP]:
-                return self.model.random.choice(moves)
+                return self._choose_random_move(moves)
             
             else:
                 # Blocked by another robot
                 bypass = self.get_available_moves([Action.MOVE_TOP, Action.MOVE_DOWN, Action.MOVE_LEFT])
-                return self.model.random.choice(bypass)
+                return self._choose_random_move(bypass)
             
     def _update_state(self):
         if self._content[self.color] == 1 and not self.is_carrying_payload():
@@ -478,16 +500,16 @@ class YellowRobotAgent(RobotAgent):
                 # Try to go to a free cell else
                 else:
                     moves = self.get_available_moves([Action.MOVE_TOP, Action.MOVE_DOWN])
-                    return self.model.random.choice(moves)
+                    return self._choose_random_move(moves)
 
             # Move to the border of the accessible zone
             moves = self.get_available_moves([Action.MOVE_RIGHT])
             if moves != [Action.NOOP]:
-                return self.model.random.choice(moves)
+                return self._choose_random_move(moves)
             else:
                 # Blocked by another robot
                 bypass = self.get_available_moves([Action.MOVE_TOP, Action.MOVE_DOWN, Action.MOVE_LEFT])
-                return self.model.random.choice(bypass)
+                return self._choose_random_move(bypass)
                 
         # Case 2 : The robot is looking for a waste
         else:
@@ -522,20 +544,20 @@ class RedRobotAgent(RobotAgent):
             if right_pos not in self._knowledge: 
                 moves = self.get_available_moves([Action.MOVE_TOP, Action.MOVE_DOWN])
                 if moves != [Action.NOOP]:
-                    return self.model.random.choice(moves)
+                    return self._choose_random_move(moves)
                 else:
                     # Blocked by another robot
                     bypass = self.get_available_moves([Action.MOVE_LEFT])
-                    return self.model.random.choice(bypass)
+                    return self._choose_random_move(bypass)
 
             # Move to the right border
             moves = self.get_available_moves([Action.MOVE_RIGHT])
             if moves != [Action.NOOP]:
-                return self.model.random.choice(moves)
+                return self._choose_random_move(moves)
             else:
                 # Blocked by another robot
                 bypass = self.get_available_moves([Action.MOVE_TOP, Action.MOVE_DOWN, Action.MOVE_LEFT])
-                return self.model.random.choice(bypass)
+                return self._choose_random_move(bypass)
                 
         # Case 2 : The robot is looking for a red waste
         else:

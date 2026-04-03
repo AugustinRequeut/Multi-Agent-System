@@ -40,6 +40,22 @@ model_params = {
         "max": 0.5,
         "step": 0.01,
     },
+    "alpha": {
+        "type": "SliderFloat",
+        "value": 0.2,
+        "label": "alpha:",
+        "min": 0.0,
+        "max": 1.0,
+        "step": 0.01,
+    },
+    "k": {
+        "type": "SliderFloat",
+        "value": 1.0,
+        "label": "k:",
+        "min": 0.0,
+        "max": 10.0,
+        "step": 0.5,
+    },
 }
 
 # Create initial model instance

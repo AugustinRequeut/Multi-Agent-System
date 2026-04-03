@@ -38,7 +38,8 @@ MOVE_COORDS = {
     Action.MOVE_RIGHT: (1, 0),
     Action.MOVE_LEFT: (-1,0),
     Action.MOVE_TOP: (0,1),
-    Action.MOVE_DOWN: (0,-1)
+    Action.MOVE_DOWN: (0,-1),
+    Action.NOOP: (0,0)
 }
 
 COLOR_MAPPING = {

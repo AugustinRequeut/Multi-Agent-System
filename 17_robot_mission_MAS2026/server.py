@@ -32,10 +32,26 @@ model_params = {
         "max": 20,
         "step": 1,
     },
-    "initial_waste_density": {
+    "initial_waste_density_green": {
         "type": "SliderFloat",
         "value": 0.1,
-        "label": "Density of waste:",
+        "label": "Density of green waste:",
+        "min": 0.01,
+        "max": 0.5,
+        "step": 0.01,
+    },
+    "initial_waste_density_yellow": {
+        "type": "SliderFloat",
+        "value": 0.1,
+        "label": "Density of yellow waste:",
+        "min": 0.01,
+        "max": 0.5,
+        "step": 0.01,
+    },
+    "initial_waste_density_red": {
+        "type": "SliderFloat",
+        "value": 0.1,
+        "label": "Density of red waste:",
         "min": 0.01,
         "max": 0.5,
         "step": 0.01,
@@ -59,7 +75,7 @@ model_params = {
 }
 
 # Create initial model instance
-model = RobotMission(number_of_green_robots=10, number_of_yellow_robots=10, number_of_red_robots=10, initial_waste_density=0.1)
+model = RobotMission(number_of_green_robots=10, number_of_yellow_robots=10, number_of_red_robots=10, initial_waste_density_green=0.1, initial_waste_density_yellow=0.1, initial_waste_density_red=0.1)
 
 SpaceGraph = make_space_component(agent_portrayal)
 WastePlot = make_plot_component(

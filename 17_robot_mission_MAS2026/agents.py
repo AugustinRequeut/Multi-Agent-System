@@ -89,41 +89,58 @@ class RobotAgent(CommunicatingAgent):
             return self._behavior_participant()
 
     def _behavior_normal(self):
-        # Case 1: The robot carries an object ready to be deposited
         if self.is_carrying_payload():
-            dx, dy = MOVE_COORDS[Action.MOVE_RIGHT]
-            right_pos = (self.pos[0] + dx, self.pos[1] + dy)
-            at_border = right_pos not in self._knowledge or not self.can_access_pos(right_pos)
-            
-            if at_border:
-                # If the case is free, deposit
-                if not self.get_objects_in_pos(self.pos, Waste):
-                    return Action.INTERACT
-                # Try to go to a free cell else
-                else:
-                    moves = self.get_available_moves([Action.MOVE_TOP, Action.MOVE_DOWN])
-                    return self._choose_random_move(moves)
-
-            # Move to the border of the accessible zone
-            moves = self.get_available_moves([Action.MOVE_RIGHT])
-            if moves != [Action.NOOP]:
-                return self._choose_random_move(moves)
-            else:
-                # Blocked by another robot
-                bypass = self.get_available_moves([Action.MOVE_TOP, Action.MOVE_DOWN, Action.MOVE_LEFT])
-                return self._choose_random_move(bypass)
-                
-        # Case 2 : The robot is looking for a waste
+            return self._behavior_deliver()
         else:
-            target_pos = self.find_target_waste()
-            
-            if target_pos == self.pos:
+            return self._behavior_search()
+    
+    def _behavior_deliver(self):
+        """Behavior when agent as a waste ready to be delivered."""
+        dx, dy = MOVE_COORDS[Action.MOVE_RIGHT]
+        right_pos = (self.pos[0] + dx, self.pos[1] + dy)
+        at_border = right_pos not in self._knowledge or not self.can_access_pos(right_pos)
+        
+        if at_border:
+            # If the case is free, deposit
+            if not self.get_objects_in_pos(self.pos, Waste):
                 return Action.INTERACT
-            elif target_pos is not None:
-                return self.move_towards(target_pos)
+            # Try to go to a free cell else
             else:
-                all_moves = self.get_available_moves([Action.MOVE_RIGHT, Action.MOVE_LEFT, Action.MOVE_TOP, Action.MOVE_DOWN])
-                return self._choose_random_move(all_moves)
+                moves = self.get_available_moves([Action.MOVE_TOP, Action.MOVE_DOWN])
+                return self._choose_random_move(moves)
+
+        # Move to the border of the accessible zone
+        moves = self.get_available_moves([Action.MOVE_RIGHT])
+        if moves != [Action.NOOP]:
+            return self._choose_random_move(moves)
+        else:
+            # Blocked by another robot
+            bypass = self.get_available_moves([Action.MOVE_TOP, Action.MOVE_DOWN, Action.MOVE_LEFT])
+            return self._choose_random_move(bypass)
+        
+    def _behavior_search(self):
+        """Behavior when agent is looking for a waste."""
+        target_pos = self.find_target_waste()
+        if target_pos == self.pos:
+            return Action.INTERACT
+        elif target_pos is not None:
+            return self.move_towards(target_pos)
+        else:
+            all_moves = self.get_available_moves([Action.MOVE_RIGHT, Action.MOVE_LEFT, Action.MOVE_TOP, Action.MOVE_DOWN])
+            moves = self.get_available_moves([Action.MOVE_RIGHT, Action.MOVE_LEFT, Action.MOVE_TOP, Action.MOVE_DOWN])
+            
+            # We don't want to go to the previous zone
+            if Action.MOVE_LEFT in moves:
+                dx, dy = MOVE_COORDS[Action.MOVE_LEFT]
+                left_pos = (self.pos[0] + dx, self.pos[1] + dy)
+                
+                if self.get_zone(left_pos) < self.color.value:
+                    moves.remove(Action.MOVE_LEFT)
+
+            if moves and moves != [Action.NOOP]:
+                return self._choose_random_move(moves)
+                
+            return Action.INTERACT
 
     def _behavior_initiator(self):
         # print(f"{self.get_name()}: {self.state}")
@@ -427,6 +444,7 @@ class RobotAgent(CommunicatingAgent):
         fallback = self.get_available_moves([Action.MOVE_RIGHT, Action.MOVE_LEFT, Action.MOVE_TOP, Action.MOVE_DOWN])
         return self._choose_random_move(fallback)
     
+    # Old logic (when wastes only in green zone)
     def move_to_left_border_zone(self):
         """Computes an action to approach the left border of the zone corresponding to the agent's color"""
         # Case 1: The agent is in the zone corresponding to its color
@@ -486,42 +504,6 @@ class YellowRobotAgent(RobotAgent):
     def __init__(self, model):
         super().__init__(model, Color.YELLOW, 2)
 
-    def _behavior_normal(self):
-        # Case 1: The robot carries an object ready to be deposited
-        if self.is_carrying_payload():
-            dx, dy = MOVE_COORDS[Action.MOVE_RIGHT]
-            right_pos = (self.pos[0] + dx, self.pos[1] + dy)
-            at_border = right_pos not in self._knowledge or not self.can_access_pos(right_pos)
-            
-            if at_border:
-                # If the case is free, deposit
-                if not self.get_objects_in_pos(self.pos, Waste):
-                    return Action.INTERACT
-                # Try to go to a free cell else
-                else:
-                    moves = self.get_available_moves([Action.MOVE_TOP, Action.MOVE_DOWN])
-                    return self._choose_random_move(moves)
-
-            # Move to the border of the accessible zone
-            moves = self.get_available_moves([Action.MOVE_RIGHT])
-            if moves != [Action.NOOP]:
-                return self._choose_random_move(moves)
-            else:
-                # Blocked by another robot
-                bypass = self.get_available_moves([Action.MOVE_TOP, Action.MOVE_DOWN, Action.MOVE_LEFT])
-                return self._choose_random_move(bypass)
-                
-        # Case 2 : The robot is looking for a waste
-        else:
-            target_pos = self.find_target_waste()
-            
-            if target_pos == self.pos:
-                return Action.INTERACT
-            elif target_pos is not None:
-                return self.move_towards(target_pos)
-            else:
-                return self.move_to_left_border_zone()
-
 class RedRobotAgent(RobotAgent):
     def __init__(self, model):
         super().__init__(model, Color.RED, 1)
@@ -535,43 +517,35 @@ class RedRobotAgent(RobotAgent):
                 if any(isinstance(obj, WasteDisposalZone) for obj in contents):
                     self._disposal_zone_pos = pos
                     break
+    
+    def _behavior_deliver(self):
+        if self.get_objects_in_pos(self.pos, WasteDisposalZone):
+            return Action.INTERACT
+        
+        # The robot knows where the waste disposal zone is
+        if self._disposal_zone_pos is not None:
+            return self.move_towards(self._disposal_zone_pos)
 
-    def _behavior_normal(self):
-        # Case 1: The robot carries an red waste ready to be deposited
-        if self.is_carrying_payload():
-            if self.get_objects_in_pos(self.pos, WasteDisposalZone):
-                return Action.INTERACT
+        # We know that the zone is on the right
+        dx, dy = MOVE_COORDS[Action.MOVE_RIGHT]
+        right_pos = (self.pos[0] + dx, self.pos[1] + dy)
+
+        if right_pos not in self._knowledge: 
+            moves = self.get_available_moves([Action.MOVE_TOP, Action.MOVE_DOWN])
             
-            # The robot knows where the waste disposal zone is
-            if self._disposal_zone_pos is not None:
-                return self.move_towards(self._disposal_zone_pos)
+            if moves and moves != [Action.NOOP]:
+                return self._choose_random_move(moves)
+            else:
+                bypass = self.get_available_moves([Action.MOVE_LEFT])
+                if bypass: return self._choose_random_move(bypass)
+                return Action.INTERACT
 
-            dx, dy = MOVE_COORDS[Action.MOVE_RIGHT]
-            right_pos = (self.pos[0] + dx, self.pos[1] + dy)
-
-            # The robot is at the border
-            if right_pos not in self._knowledge: 
-                moves = self.get_available_moves([Action.MOVE_TOP, Action.MOVE_DOWN])
-                if moves != [Action.NOOP]:
-                    return self._choose_random_move(moves)
-                else:
-                    bypass = self.get_available_moves([Action.MOVE_LEFT])
-                    return self._choose_random_move(bypass)
-
+        else:
             moves = self.get_available_moves([Action.MOVE_RIGHT])
-            if moves != [Action.NOOP]:
+            
+            if moves and moves != [Action.NOOP]:
                 return self._choose_random_move(moves)
             else:
                 bypass = self.get_available_moves([Action.MOVE_TOP, Action.MOVE_DOWN, Action.MOVE_LEFT])
-                return self._choose_random_move(bypass)
-                
-        # Case 2 : The robot is looking for a red waste
-        else:
-            target_pos = self.find_target_waste()
-            
-            if target_pos == self.pos:
+                if bypass: return self._choose_random_move(bypass)
                 return Action.INTERACT
-            elif target_pos is not None:
-                return self.move_towards(target_pos)
-            else:
-                return self.move_to_left_border_zone()

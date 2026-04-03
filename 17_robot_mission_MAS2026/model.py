@@ -29,19 +29,21 @@ def compute_disposed_waste(model):
 
 class RobotMission(Model):
     """A model with some number of agents."""
-    def __init__(self, number_of_green_robots=1, number_of_yellow_robots=1, number_of_red_robots=1, initial_waste_density=0.1, width_z1=10, width_z2=10, width_z3=10, height=30, seed=None, alpha=0.2, k=3):
+    def __init__(self, number_of_green_robots=1, number_of_yellow_robots=1, number_of_red_robots=1, initial_waste_density_green=0.1, initial_waste_density_yellow=0.1, initial_waste_density_red=0.1, width_z1=10, width_z2=10, width_z3=10, height=30, seed=None, alpha=0.2, k=3):
         """Initialize the model.
 
         Args:
-            number_of_green_robots (int, optional): Number of green robots. Defaults to 10.
-            number_of_yellow_robots (int, optional): Number of yellow robots. Defaults to 10.
-            number_of_red_robots (int, optional): Number of red robots. Defaults to 10.
-            initial_waste_density (float, optional): Probability that a zone 1 cell contains a waste at the beginning. Defaults to 0.4
-            width_z1 (int, optional): z1 grid width. Defaults to 10.
-            width_z2 (int, optional): z2 grid width. Defaults to 10.
-            width_z3 (int, optional): z3 grid width. Defaults to 10.
-            height (int, optional): Grid height. Defaults to 30.
-            seed (int, optional): Random seed. Defaults to None.
+            number_of_green_robots (int, optional): Number of green robots.
+            number_of_yellow_robots (int, optional): Number of yellow robots.
+            number_of_red_robots (int, optional): Number of red robots.
+            initial_waste_density_green (float, optional): Probability that a zone 1 cell contains a waste at the beginning.
+            initial_waste_density_yellow (float, optional): Probability that a zone 2 cell contains a waste at the beginning.
+            initial_waste_density_red (float, optional): Probability that a zone 3 cell contains a waste at the beginning.
+            width_z1 (int, optional): z1 grid width.
+            width_z2 (int, optional): z2 grid width.
+            width_z3 (int, optional): z3 grid width.
+            height (int, optional): Grid height.
+            seed (int, optional): Random seed.
             alpha (float):
             k (float):
         """
@@ -76,6 +78,8 @@ class RobotMission(Model):
         self.grid = MultiGrid(width_z1 + width_z2 + width_z3, height, torus=False)
 
         z1_coords = [pos for _, pos in self.grid.coord_iter() if self._get_zone(pos) == 1]
+        z2_coords = [pos for _, pos in self.grid.coord_iter() if self._get_zone(pos) == 2]
+        z3_coords = [pos for _, pos in self.grid.coord_iter() if self._get_zone(pos) == 3]
 
         # Init Radioactivity levels
         for _, pos in self.grid.coord_iter():
@@ -90,8 +94,18 @@ class RobotMission(Model):
 
         # Init Wastes
         for pos in z1_coords:
-            if self.random.random() <= initial_waste_density:
+            if self.random.random() <= initial_waste_density_green:
                 waste = Waste(self, Color.GREEN)
+                self.grid.place_agent(waste, pos)
+        
+        for pos in z2_coords:
+            if self.random.random() <= initial_waste_density_green:
+                waste = Waste(self, Color.YELLOW)
+                self.grid.place_agent(waste, pos)
+
+        for pos in z3_coords:
+            if self.random.random() <= initial_waste_density_green:
+                waste = Waste(self, Color.RED)
                 self.grid.place_agent(waste, pos)
 
         # Init Waste disposal zone

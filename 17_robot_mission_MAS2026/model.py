@@ -29,7 +29,7 @@ def compute_disposed_waste(model):
 
 class RobotMission(Model):
     """A model with some number of agents."""
-    def __init__(self, number_of_green_robots=1, number_of_yellow_robots=1, number_of_red_robots=1, initial_waste_density=0.1, width_z1=10, width_z2=10, width_z3=10, height=30, seed=None, alpha=0.2, k=3):
+    def __init__(self, number_of_green_robots=1, number_of_yellow_robots=1, number_of_red_robots=1, initial_waste_density=0.1, width_z1=10, width_z2=10, width_z3=10, height=30, seed=None, inertia_decay_factor=0.2, inertia_power=1):
         """Initialize the model.
 
         Args:
@@ -42,11 +42,19 @@ class RobotMission(Model):
             width_z3 (int, optional): z3 grid width. Defaults to 10.
             height (int, optional): Grid height. Defaults to 30.
             seed (int, optional): Random seed. Defaults to None.
-            alpha (float):
-            k (float):
+            inertia_decay_factor (float, optional): 
+                The decay factor for the agents random movement inertia.
+                Should be between 0 and 1.
+                If equals to 0, the agents will always try to perform their last move if they have no targets.
+                If equals to 1, there is no inertia : the agents will move uniformly at random if they have no targets.
+                Defaults to 0.2.
+            inertia_power (float, optional): 
+                The power of the agents inertia in the selection of a random move.
+                If equals to 0, inertia is not taken into account: the agents will move uniformly at random if they have no targets.
+                Defaults to 1.
         """
-        self.alpha = alpha
-        self.k = k 
+        self.inertia_decay_factor = inertia_decay_factor
+        self.inertia_power = inertia_power
 
         super().__init__(seed=seed)
 

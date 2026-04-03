@@ -49,8 +49,8 @@ class RobotAgent(CommunicatingAgent):
             dx = self.pos[0] - self._last_pos[0]
             dy = self.pos[1] - self._last_pos[1]
 
-            self._inertia[0] = self.model.alpha * self._inertia[0] + (1 - self.model.alpha) * dx
-            self._inertia[1] = self.model.alpha * self._inertia[1] + (1 - self.model.alpha) * dy
+            self._inertia[0] = self.model.inertia_decay_factor * self._inertia[0] + (1 - self.model.inertia_decay_factor) * dx
+            self._inertia[1] = self.model.inertia_decay_factor * self._inertia[1] + (1 - self.model.inertia_decay_factor) * dy
         
         self._last_pos = self.pos
     
@@ -60,7 +60,7 @@ class RobotAgent(CommunicatingAgent):
 
         for move in moves:
             dx, dy = MOVE_COORDS[move]
-            weight = exp(self.model.k * (self._inertia[0]*dx + self._inertia[1]*dy))
+            weight = exp(self.model.inertia_power * (self._inertia[0]*dx + self._inertia[1]*dy))
             weights.append(weight) 
 
         return self.model.random.choices(moves, weights=weights, k=1)[0]

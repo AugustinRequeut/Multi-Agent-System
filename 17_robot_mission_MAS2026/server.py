@@ -40,18 +40,18 @@ model_params = {
         "max": 0.5,
         "step": 0.01,
     },
-    "alpha": {
+    "inertia_decay_factor": {
         "type": "SliderFloat",
         "value": 0.2,
-        "label": "alpha:",
+        "label": "Inertia decay factor:",
         "min": 0.0,
         "max": 1.0,
         "step": 0.01,
     },
-    "k": {
+    "inertia_power": {
         "type": "SliderFloat",
         "value": 1.0,
-        "label": "k:",
+        "label": "Inertia power:",
         "min": 0.0,
         "max": 10.0,
         "step": 0.5,

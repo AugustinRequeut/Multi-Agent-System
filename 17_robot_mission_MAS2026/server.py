@@ -92,10 +92,16 @@ WastePlot = make_plot_component(
     }
 )
 
+ScorePlot = make_plot_component(
+    {
+        "Waste Score": "black"
+    }
+)
+
 #Create the Dashboard
 page = SolaraViz(
     model,
-    components=[SpaceGraph, WastePlot],
+    components=[SpaceGraph, WastePlot, ScorePlot],
     model_params=model_params,
     name="Robot Mission",
 )

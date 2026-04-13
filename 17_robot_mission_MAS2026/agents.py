@@ -290,7 +290,7 @@ class RobotAgent(CommunicatingAgent):
                 self.state = RobotState.NORMAL
                 self.partner_id = None
                 self.rendezvous_pos = None
-                print("Exchange was successfull")
+                # print("Exchange was successfull")
                 return Action.INTERACT
 
             if self.rendezvous_pos[0] > self.pos[0]:

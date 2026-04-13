@@ -75,6 +75,7 @@ class RobotMission(Model):
                 "Green Waste": lambda m: compute_waste_by_color(m, Color.GREEN),
                 "Yellow Waste": lambda m: compute_waste_by_color(m, Color.YELLOW),
                 "Red Waste": lambda m: compute_waste_by_color(m, Color.RED),
+                "Waste Score": compute_waste_score,
                 "Disposed": compute_disposed_waste
             },
         )
@@ -204,3 +205,25 @@ class RobotMission(Model):
             percepts[pos] = contents
 
         return percepts
+
+def compute_waste_score(model):
+    """
+    Compute total waste score of the non disposed wastes.
+    Green = 1 point, Yellow = 2 points, Red = 4 points.
+    """
+    score = 0
+    for agent in model.agents:
+        if isinstance(agent, Waste):
+            if agent.color == Color.GREEN:
+                score += 1
+            elif agent.color == Color.YELLOW:
+                score += 2
+            elif agent.color == Color.RED:
+                score += 4
+                
+        elif isinstance(agent, RobotAgent):
+            score += agent.get_waste_count(Color.GREEN) * 1
+            score += agent.get_waste_count(Color.YELLOW) * 2
+            score += agent.get_waste_count(Color.RED) * 4
+            
+    return score

@@ -1,0 +1,18 @@
+{
+  "comms_True": {
+    "avg_steps": 741.1,
+    "efficiency": 84.71,
+    "score_stats": {
+      "mean": 175.6,
+      "std": 70.8
+    }
+  },
+  "comms_False": {
+    "avg_steps": 928.7,
+    "efficiency": 81.56,
+    "score_stats": {
+      "mean": 171.9,
+      "std": 72.7
+    }
+  }
+}

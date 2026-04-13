@@ -29,7 +29,7 @@ def compute_disposed_waste(model):
 
 class RobotMission(Model):
     """A model with some number of agents."""
-    def __init__(self, number_of_green_robots=1, number_of_yellow_robots=1, number_of_red_robots=1, initial_waste_density_green=0.1, initial_waste_density_yellow=0.1, initial_waste_density_red=0.1, width_z1=10, width_z2=10, width_z3=10, height=30, seed=None, inertia_decay_factor=0.2, inertia_power=3):
+    def __init__(self, number_of_green_robots=1, number_of_yellow_robots=1, number_of_red_robots=1, initial_waste_density_green=0.1, initial_waste_density_yellow=0.1, initial_waste_density_red=0.1, width_z1=10, width_z2=10, width_z3=10, height=30, seed=None, inertia_decay_factor=0.2, inertia_power=3, can_communicate=True):
         """Initialize the model.
 
         Args:
@@ -52,9 +52,11 @@ class RobotMission(Model):
             inertia_power (float, optional): 
                 The power of the agents inertia in the selection of a random move.
                 If equals to 0, inertia is not taken into account: the agents will move uniformly at random if they have no targets.
+            can_communicate (bool): Enable communication between agents
         """
         self.inertia_decay_factor = inertia_decay_factor
         self.inertia_power = inertia_power
+        self.can_communicate = can_communicate
 
         super().__init__(seed=seed)
 

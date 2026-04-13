@@ -8,6 +8,11 @@ def agent_portrayal(agent):
     return agent.get_display_dict()
 
 model_params = {
+    "can_communicate": {
+        "type": "Checkbox",
+        "value": True,
+        "label": "Enable Communication:",
+    },
     "number_of_green_robots": {
         "type": "SliderInt",
         "value": 5,
@@ -75,7 +80,7 @@ model_params = {
 }
 
 # Create initial model instance
-model = RobotMission(number_of_green_robots=10, number_of_yellow_robots=10, number_of_red_robots=10, initial_waste_density_green=0.1, initial_waste_density_yellow=0.1, initial_waste_density_red=0.1)
+model = RobotMission(number_of_green_robots=10, number_of_yellow_robots=10, number_of_red_robots=10, initial_waste_density_green=0.1, initial_waste_density_yellow=0.1, initial_waste_density_red=0.1, can_communicate=True)
 
 SpaceGraph = make_space_component(agent_portrayal)
 WastePlot = make_plot_component(

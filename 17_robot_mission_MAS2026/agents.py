@@ -67,11 +67,11 @@ class RobotAgent(CommunicatingAgent):
 
     def _deliberate(self):
         if self.state == RobotState.NORMAL:
-            if self.color == Color.GREEN or self.color == Color.YELLOW: # Only green and yellow robots will try to exchange wastes
+            if self.model.can_communicate and (self.color == Color.GREEN or self.color == Color.YELLOW): # Only green and yellow robots will try to exchange wastes
                 self._update_state()
         
             # Check if he can accept a potential trade
-            if self._content[self.color] == 1 and not self.is_carrying_payload():
+            if self.model.can_communicate and (self._content[self.color] == 1 and not self.is_carrying_payload()):
                 new_msgs = self.get_new_messages()
                 cfps = [m for m in new_msgs if m.get_performative() == MessagePerformative.CFP]
                 if cfps:
@@ -305,12 +305,6 @@ class RobotAgent(CommunicatingAgent):
             raise ValueError("Robot moved further from rendez-vous point in COLLECTING WASTE state.")
 
     def get_display_dict(self):
-        if self.state != RobotState.NORMAL:
-            return {
-            "size": 50, 
-            "color": COLOR_MAPPING.get(self.color, "black"),
-            "marker": "<",
-        }
         return {
             "size": 50,
             "color": COLOR_MAPPING.get(self.color, "black"),

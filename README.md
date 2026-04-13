@@ -59,6 +59,8 @@ solara run server.py
     - Once the other agent has reached it, it sends a message to the agent.
     - The agent deposit its waste and the other agent pick it.  
     - Each stage of this process has a limit of steps to avoid deadlocked cases.
+  This process is described in the following sequence diagram :
+  ![Alt Sequence Diagram](sequence_diagram.png?raw=true)
 
 **Metrics Tracked**
 

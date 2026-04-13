@@ -64,9 +64,32 @@ solara run server.py
 
 **Metrics Tracked**
 
-- Evolution of the quantity of wastes for each color over time.
-- Total number of wastes successfully deposited over time.
+A model is evaluated by:
+
+- The average number of steps required to deposit all wastes across multiple simulations.
+- The disposal score on multiple simulations: equal to four times the number of red wastes deposited.
+- The efficiency on multiple simulations: the percentage of the disposed score compared to the total value of wastes at the beginning of each simulation, ponderated the following way : 
+  - green waste : 1 point
+  - yellow waste : 2 points
+  - red waste : 4 points 
+- The average cleared waste value and its standard deviation.
+
+**Results**
+
+The current experiment compares model behavior with and without inter-agent communication.
+
+- With communication:
+  - Average completion: 741.1 steps
+  - Efficiency: 84.71%
+  - Disposed score: 175.6 ± 70.8 points
+- Without communication:
+  - Average completion: 928.7 steps
+  - Efficiency: 81.56%
+  - Disposed score: 171.9 ± 72.7 points
+
+This shows that communication improves efficiency by about 3.15 percentage points in the current run.
 
 **Results and Current Limitations**
 
 - Even with inertia, the random navigation is still not sufficient enough to efficiently detect and pick all wastes.
+- There still exists some rare cases of softlock, especially around the waste disposal zone.
